@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kilowash — Proper Wash. Zero Stress.</title>
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet"/>
+    <link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:opsz,wght,FILL,GRAD@20..48,100..700,0..1,-50..200" rel="stylesheet"/>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            colors: {
+              neo: {
+                base:    '#dde8ea',
+                dark:    '#b8c6c9',
+                light:   '#ffffff',
+                teal:    '#0b3c42',
+                tealmd:  '#134e5e',
+                teallg:  '#1a6575',
+                tang:    '#fd8451',
+                tanglt:  '#ffb599',
+                muted:   '#5a7578',
+                faint:   '#8aa8ab',
+              }
+            },
+            fontFamily: {
+              sans: ['Plus Jakarta Sans', 'sans-serif'],
+            },
+            boxShadow: {
+              'neo-raised':  '6px 6px 14px #b8c6c9, -6px -6px 14px #ffffff',
+              'neo-raised-sm': '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff',
+              'neo-raised-lg': '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
+              'neo-inset':   'inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff',
+              'neo-inset-sm':'inset 2px 2px 6px #b8c6c9, inset -2px -2px 6px #ffffff',
+              'neo-inset-lg':'inset 6px 6px 16px #b0bec0, inset -6px -6px 16px #ffffff',
+              'neo-tang':    '4px 4px 12px rgba(253,132,81,0.4), -2px -2px 8px rgba(255,255,255,0.7)',
+              'neo-teal':    '4px 4px 12px rgba(11,60,66,0.35), -2px -2px 8px rgba(255,255,255,0.5)',
+            },
+            keyframes: {
+              floatY: {
+                '0%,100%': { transform: 'translateY(0px) rotate(0deg)' },
+                '50%':     { transform: 'translateY(-16px) rotate(3deg)' },
+              },
+              floatX: {
+                '0%,100%': { transform: 'translateX(0px) rotate(0deg)' },
+                '50%':     { transform: 'translateX(12px) rotate(-2deg)' },
+              },
+              marquee: {
+                from: { transform: 'translateX(0)' },
+                to:   { transform: 'translateX(-50%)' },
+              },
+              slideUp: {
+                from: { opacity: '0', transform: 'translateY(28px)' },
+                to:   { opacity: '1', transform: 'translateY(0)' },
+              },
+              pulseRing: {
+                '0%':   { transform: 'scale(1)',   opacity: '0.7' },
+                '100%': { transform: 'scale(2.2)', opacity: '0' },
+              },
+              spinSlow: {
+                from: { transform: 'rotate(0deg)' },
+                to:   { transform: 'rotate(360deg)' },
+              },
+            },
+            animation: {
+              floatY:    'floatY 5s ease-in-out infinite',
+              floatX:    'floatX 6s ease-in-out infinite',
+              floatY2:   'floatY 7s ease-in-out infinite 1.5s',
+              floatY3:   'floatY 4.5s ease-in-out infinite 0.8s',
+              marquee:   'marquee 30s linear infinite',
+              slideUp:   'slideUp 0.7s cubic-bezier(.22,1,.36,1) both',
+              pulseRing: 'pulseRing 1.8s ease-out infinite',
+              spinSlow:  'spinSlow 12s linear infinite',
+            },
+          },
+        },
+      }
+    </script>
+    <style>
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { background: #dde8ea; font-family: 'Plus Jakarta Sans', sans-serif; color: #0b3c42; }
+      ::-webkit-scrollbar { display: none; }
+      .marquee-track { display: flex; width: max-content; }
+
+      /* Neumorphic utility classes */
+      .neo        { background: #dde8ea; }
+      .neo-raised { background: #dde8ea; box-shadow: 6px 6px 14px #b8c6c9, -6px -6px 14px #ffffff; }
+      .neo-raised-sm { background: #dde8ea; box-shadow: 3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff; }
+      .neo-raised-lg { background: #dde8ea; box-shadow: 10px 10px 24px #b0bec0, -10px -10px 24px #ffffff; }
+      .neo-inset  { background: #dde8ea; box-shadow: inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff; }
+      .neo-inset-sm { background: #dde8ea; box-shadow: inset 2px 2px 6px #b8c6c9, inset -2px -2px 6px #ffffff; }
+      .neo-inset-lg { background: #dde8ea; box-shadow: inset 6px 6px 16px #b0bec0, inset -6px -6px 16px #ffffff; }
+
+      /* Teal filled raised */
+      .neo-teal   { background: #0b3c42; box-shadow: 4px 4px 12px rgba(11,60,66,0.45), -2px -2px 8px rgba(255,255,255,0.4); }
+      /* Tang filled raised */
+      .neo-tang   { background: #fd8451; box-shadow: 4px 4px 12px rgba(253,132,81,0.45), -2px -2px 8px rgba(255,255,255,0.5); }
+
+      /* FAQ transition */
+      .faq-body { max-height: 0; overflow: hidden; transition: max-height 0.4s cubic-bezier(.22,1,.36,1); }
+      .faq-body.open { max-height: 400px; }
+    </style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>
