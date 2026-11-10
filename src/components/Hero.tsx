@@ -221,16 +221,16 @@ export default function Hero() {
             </div>
             <div className="flex items-center gap-2">
               {[
-                { color: '#0E8A5E', label: '14 Available' },
-                { color: '#0b3c42', label: '4 In-Cycle' },
-                { color: '#fd8451', label: '2 Buffer' },
+                { icon: 'check_circle', color: '#0E8A5E', label: '14 Available' },
+                { icon: 'autorenew',    color: '#0b3c42', label: '4 In-Cycle'   },
+                { icon: 'hourglass',    color: '#fd8451', label: '2 Buffer'     },
               ].map(s => (
                 <span
                   key={s.label}
                   className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full"
                   style={{ background: '#dde8ea', boxShadow: '2px 2px 6px #b8c6c9, -2px -2px 6px #ffffff', fontSize: '11px', fontWeight: 700, color: '#5a7578' }}
                 >
-                  <span className="w-2 h-2 rounded-full" style={{ background: s.color }}></span>
+                  <span className="material-symbols-outlined text-[13px]" style={{ color: s.color }}>{s.icon}</span>
                   {s.label}
                 </span>
               ))}
@@ -255,7 +255,6 @@ export default function Hero() {
                     className="absolute top-2 right-2 px-2 py-0.5 rounded-full flex items-center gap-1"
                     style={{ background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff', fontSize: '9px', fontWeight: 700, color: bay.statusColor, textTransform: 'uppercase' }}
                   >
-                    <span className="w-1.5 h-1.5 rounded-full" style={{ background: bay.statusColor }}></span>
                     {bay.status}
                   </span>
                 </div>
@@ -274,10 +273,11 @@ export default function Hero() {
                     <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', color: '#8aa8ab', textTransform: 'uppercase' }}>Today's Slots</div>
                     {bay.slots.map(slot => {
                       const c = slotColors[slot.s]
+                      const icon = slot.s === 'booked' ? 'lock' : slot.s === 'buffer' ? 'hourglass' : 'calendar_add_on'
                       return (
                         <div key={slot.time} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg" style={{ background: `${c}14` }}>
                           <div className="flex items-center gap-1.5">
-                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: c }}></span>
+                            <span className="material-symbols-outlined text-[12px]" style={{ color: c }}>{icon}</span>
                             <span style={{ fontSize: '10px', fontWeight: 600, color: '#5a7578' }}>{slot.time}</span>
                           </div>
                           <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: c }}>
