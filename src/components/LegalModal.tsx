@@ -31,7 +31,11 @@ export default function LegalModal({ isOpen, onClose, activeDoc, onSelectDoc }: 
   return (
     <div
       className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 animate-fadeIn"
-      style={{ background: 'rgba(11, 60, 66, 0.65)', backdropFilter: 'blur(6px)' }}
+      style={{
+        background: 'rgba(221, 232, 234, 0.55)',
+        backdropFilter: 'blur(16px)',
+        WebkitBackdropFilter: 'blur(16px)',
+      }}
       onClick={e => {
         if (e.target === e.currentTarget) onClose()
       }}
@@ -39,8 +43,11 @@ export default function LegalModal({ isOpen, onClose, activeDoc, onSelectDoc }: 
       <div
         className="relative w-full max-w-2xl max-h-[90vh] rounded-3xl flex flex-col overflow-hidden p-5 sm:p-8"
         style={{
-          background: '#dde8ea',
-          boxShadow: '16px 16px 40px rgba(7, 36, 40, 0.4), -12px -12px 30px #ffffff',
+          background: 'rgba(221, 232, 234, 0.95)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+          border: '1px solid rgba(255, 255, 255, 0.75)',
+          boxShadow: '0 24px 48px rgba(11, 60, 66, 0.16), -10px -10px 28px #ffffff',
         }}
       >
         {/* Modal Top Header */}
