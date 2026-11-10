@@ -3,6 +3,7 @@ import natives from '../assets/natives.png'
 import machine from '../assets/the machine.png'
 import HeroImg from '../assets/Hero.png'
 import fila from '../assets/fila.png'
+import foldedTs from '../assets/folded Ts.png'
 
 const bays = [
   {
@@ -71,17 +72,31 @@ export default function Hero() {
           
 
             {/* Headline */}
-            <div className="relative">
+            <div className="relative pt-6 sm:pt-4">
+              {/* Folded T-shirts — top left of "Proper Wash." with 2-second vibration */}
+              <div
+                className="absolute -top-7 left-0 sm:-top-9 sm:-left-3 md:-top-11 md:-left-6 w-14 sm:w-16 md:w-20 lg:w-24 pointer-events-none z-10"
+                style={{
+                  animation: 'vibrate 2.4s ease-in-out infinite',
+                  filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))',
+                }}
+              >
+                <img src={foldedTs} alt="Folded T-shirts" className="w-full h-auto object-contain" />
+              </div>
+
               <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em', color: '#0b3c42' }}>
                 Proper Wash.
               </h1>
               <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em', color: '#fd8451' }}>
                 Zero Stress.
               </h1>
-              {/* Trousers — responsive positioning & sizing that stays clear of headline text */}
+              {/* Trousers — responsive positioning & sizing that stays clear of headline text with Brownian motion */}
               <div
-                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-10 lg:right-28 xl:right-36 w-14 sm:w-18 md:w-24 lg:w-28 pointer-events-none"
-                style={{ animation: 'floatY 6s ease-in-out infinite 0.5s', filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))' }}
+                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-16 lg:right-28 xl:right-36 w-14 sm:w-18 md:w-24 lg:w-28 pointer-events-none z-10"
+                style={{
+                  animation: 'brownian2 8s ease-in-out infinite 0.7s',
+                  filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))',
+                }}
               >
                 <img src={trousers} alt="" className="w-full h-auto object-contain" />
               </div>
@@ -124,8 +139,14 @@ export default function Hero() {
               className="relative p-5 rounded-2xl flex flex-wrap items-center justify-between gap-4"
               style={{ background: '#dde8ea', boxShadow: 'inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff' }}
             >
-              {/* Natives — bottom-left corner of metrics tray */}
-              <div className="absolute -bottom-8 -left-5 w-14 pointer-events-none" style={{ animation: 'floatX 7s ease-in-out infinite 1s', filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.18))' }}>
+              {/* Natives — bottom-left corner of metrics tray with 2-second vibration */}
+              <div
+                className="absolute -bottom-8 -left-5 w-14 pointer-events-none z-10"
+                style={{
+                  animation: 'vibrate 2.4s ease-in-out infinite 0.5s',
+                  filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.18))',
+                }}
+              >
                 <img src={natives} alt="" className="w-full h-auto object-contain" />
               </div>
               {[
@@ -181,10 +202,14 @@ export default function Hero() {
                 />
               </div>
 
-              {/* Raised badge: top right — fila logo */}
+              {/* Raised badge: top right — fila logo with 2-second vibration */}
               <div
-                className="absolute -top-4 -right-4 px-2 py-1 rounded-2xl flex items-center"
-                style={{ background: '#dde8ea', boxShadow: '4px 4px 10px #b8c6c9, -4px -4px 10px #ffffff' }}
+                className="absolute -top-4 -right-4 px-2 py-1 rounded-2xl flex items-center z-10"
+                style={{
+                  background: '#dde8ea',
+                  boxShadow: '4px 4px 10px #b8c6c9, -4px -4px 10px #ffffff',
+                  animation: 'vibrate 2.4s ease-in-out infinite 1.0s',
+                }}
               >
                 <img src={fila} alt="Fila" className="h-16 w-auto object-contain" />
               </div>

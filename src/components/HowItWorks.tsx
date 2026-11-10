@@ -15,54 +15,135 @@ export default function HowItWorks() {
   const sectionRef  = useRef<HTMLElement>(null)
   const headingRef  = useRef<HTMLDivElement>(null)
   const cardsRef    = useRef<HTMLDivElement>(null)
-  const scheduleRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const ctx = gsap.context(() => {
+    const mm = gsap.matchMedia()
 
+    // Mobile: (< 768px) Pinned horizontal parallax scroll from right to left
+    mm.add('(max-width: 767px)', () => {
+      // Header slides up
+      gsap.from(headingRef.current, {
+        y: 30,
+        opacity: 0,
+        duration: 0.6,
+        ease: 'power3.out',
+        scrollTrigger: {
+          trigger: headingRef.current,
+          start: 'top 85%',
+        },
+      })
+
+      const track = cardsRef.current
+      if (!track) return
+
+      const getTotalScroll = () => {
+        const parentW = sectionRef.current?.clientWidth || window.innerWidth
+        return Math.max(0, track.scrollWidth - parentW + 32)
+      }
+
+      // Horizontal track scroll from right to left as user scrolls down
+      gsap.to(track, {
+        x: () => -getTotalScroll(),
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top top+=64',
+          end: () => `+=${getTotalScroll() * 1.15}`,
+          pin: true,
+          scrub: 0.8,
+          invalidateOnRefresh: true,
+          anticipatePin: 1,
+          onUpdate: (self) => {
+            const activeIndex = Math.min(3, Math.floor(self.progress * 4))
+            const dots = document.querySelectorAll('.hiw-dot')
+            dots.forEach((dot, idx) => {
+              const el = dot as HTMLElement
+              if (idx === activeIndex) {
+                el.style.width = '20px'
+                el.style.opacity = '1'
+              } else {
+                el.style.width = '6px'
+                el.style.opacity = '0.35'
+              }
+            })
+          },
+        },
+      })
+
+      // Parallax effect on ghost numbers (drifting faster to the left)
+      gsap.to('.hiw-ghost-num', {
+        x: -50,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top top+=64',
+          end: () => `+=${getTotalScroll() * 1.15}`,
+          scrub: 0.8,
+        },
+      })
+
+      // Parallax effect on icons (subtle tilt and offset)
+      gsap.to('.hiw-card-icon', {
+        x: 16,
+        rotation: 6,
+        ease: 'none',
+        scrollTrigger: {
+          trigger: sectionRef.current,
+          start: 'top top+=64',
+          end: () => `+=${getTotalScroll() * 1.15}`,
+          scrub: 0.8,
+        },
+      })
+    })
+
+    // Desktop & Tablet: (>= 768px) Standard grid stagger entrance
+    mm.add('(min-width: 768px)', () => {
       // Header slides up + fades in
       gsap.from(headingRef.current, {
-        y: 40, opacity: 0, duration: 0.8, ease: 'power3.out',
+        y: 40,
+        opacity: 0,
+        duration: 0.8,
+        ease: 'power3.out',
         scrollTrigger: { trigger: headingRef.current, start: 'top 85%' },
       })
 
       // Cards stagger in from below
       gsap.from('.hiw-card', {
-        y: 60, opacity: 0, duration: 0.7, ease: 'power3.out', stagger: 0.15,
+        y: 60,
+        opacity: 0,
+        duration: 0.7,
+        ease: 'power3.out',
+        stagger: 0.15,
         scrollTrigger: { trigger: cardsRef.current, start: 'top 80%' },
       })
 
-      // Connector line draws across (desktop only)
+      // Connector line draws across
       gsap.from('.hiw-connector', {
-        scaleX: 0, transformOrigin: 'left center', duration: 1, ease: 'power2.inOut',
+        scaleX: 0,
+        transformOrigin: 'left center',
+        duration: 1,
+        ease: 'power2.inOut',
         scrollTrigger: { trigger: cardsRef.current, start: 'top 75%' },
       })
+    })
 
-      // Schedule panel slides up
-      gsap.from(scheduleRef.current, {
-        y: 50, opacity: 0, duration: 0.8, ease: 'power3.out',
-        scrollTrigger: { trigger: scheduleRef.current, start: 'top 85%' },
-      })
-
-    }, sectionRef)
-
-    return () => ctx.revert()
+    return () => mm.revert()
   }, [])
 
   return (
-    <section ref={sectionRef} id="how" className="w-full py-20 px-8" style={{ background: '#dde8ea' }}>
+    <section ref={sectionRef} id="how" className="w-full py-16 sm:py-20 px-4 sm:px-6 md:px-8 relative overflow-hidden" style={{ background: '#dde8ea' }}>
       <div className="max-w-[1280px] mx-auto">
 
         {/* Header */}
-        <div ref={headingRef} className="mb-14 max-w-xl">
+        <div ref={headingRef} className="mb-8 md:mb-14 max-w-xl">
           <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '8px' }}>Zero Line Friction</div>
           <h2 style={{ fontWeight: 800, fontSize: 'clamp(1.8rem, 3.5vw, 2.8rem)', lineHeight: 1.05, letterSpacing: '-0.03em', color: '#0b3c42' }}>
             Four steps from phone to fresh clothes.
           </h2>
         </div>
 
-        {/* Steps */}
-        <div ref={cardsRef} className="relative">
+        {/* Steps track wrapper */}
+        <div className="relative overflow-hidden md:overflow-visible">
 
           {/* Connector line — desktop only */}
           <div
@@ -70,24 +151,40 @@ export default function HowItWorks() {
             style={{ background: 'linear-gradient(to right, #b8c6c9 0%, #fd8451 50%, #b8c6c9 100%)', opacity: 0.5 }}
           />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+          {/* Cards Track: flex-nowrap on mobile for right-to-left parallax scroll; grid on desktop */}
+          <div
+            ref={cardsRef}
+            className="flex flex-nowrap md:grid md:grid-cols-2 lg:grid-cols-4 gap-4 sm:gap-6 will-change-transform"
+          >
             {steps.map(s => (
               <div
                 key={s.num}
-                className="hiw-card relative flex flex-col p-7 rounded-2xl"
+                className="hiw-card relative flex flex-col p-6 sm:p-7 rounded-2xl w-[82vw] max-w-[340px] shrink-0 md:w-auto md:max-w-none md:shrink"
                 style={{ background: '#dde8ea', boxShadow: '8px 8px 18px #b8c6c9, -8px -8px 18px #ffffff' }}
               >
-                {/* Ghost number */}
+                {/* Ghost number with parallax target */}
                 <span
-                  className="absolute top-4 right-5 select-none"
-                  style={{ fontWeight: 800, fontSize: '3.5rem', lineHeight: 1, color: 'rgba(11,60,66,0.05)', letterSpacing: '-0.04em' }}
+                  className="hiw-ghost-num absolute top-4 right-5 select-none pointer-events-none will-change-transform"
+                  style={{ fontWeight: 800, fontSize: '3.5rem', lineHeight: 1, color: 'rgba(11,60,66,0.06)', letterSpacing: '-0.04em' }}
                 >
                   {s.num}
                 </span>
 
-                {/* Icon — inset circle */}
+                {/* Step pill tag */}
+                <span
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full mb-4 self-start text-[10px] font-bold uppercase tracking-wider"
+                  style={{
+                    background: `${s.accent}14`,
+                    color: s.accent,
+                    boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff',
+                  }}
+                >
+                  Step {s.num}
+                </span>
+
+                {/* Icon — inset circle with parallax target */}
                 <div
-                  className="w-12 h-12 rounded-2xl flex items-center justify-center mb-6"
+                  className="hiw-card-icon w-12 h-12 rounded-2xl flex items-center justify-center mb-5 will-change-transform"
                   style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff', color: s.accent }}
                 >
                   <span className="material-symbols-outlined text-[24px]">{s.icon}</span>
@@ -103,52 +200,28 @@ export default function HowItWorks() {
               </div>
             ))}
           </div>
-        </div>
 
-        {/* Slot schedule */}
-        {/* <div
-          ref={scheduleRef}
-          className="mt-10 p-8 rounded-2xl"
-          style={{ background: '#0b3c42', boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3), inset 0 -2px 8px rgba(255,255,255,0.05)' }}
-        >
-          <div className="mb-6">
-            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '8px' }}>How Slots Work</div>
-            <h3 style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white', letterSpacing: '-0.02em', marginBottom: '8px' }}>Your 30 minutes is yours — no overlap, ever.</h3>
-            <p style={{ fontSize: '13px', color: 'rgba(162,206,213,0.6)', lineHeight: 1.7, maxWidth: '560px' }}>
-              Every wash cycle is followed by a mandatory 10-minute unload buffer — so the next person can't start until you've cleared your clothes. Here's what a real afternoon looks like on one machine:
-            </p>
+          {/* Mobile parallax scroll progress indicator */}
+          <div className="flex md:hidden items-center justify-between mt-6 px-1">
+            <div className="flex items-center gap-1.5">
+              {steps.map(s => (
+                <span
+                  key={s.num}
+                  className="hiw-dot h-1.5 rounded-full transition-all duration-300"
+                  style={{
+                    width: s.num === '01' ? '20px' : '6px',
+                    background: s.accent,
+                    opacity: s.num === '01' ? 1 : 0.35,
+                  }}
+                />
+              ))}
+            </div>
+            <div className="flex items-center gap-1 text-[11px] font-bold" style={{ color: '#5a7578' }}>
+              <span>Scroll to explore</span>
+              <span className="material-symbols-outlined text-[14px]">arrow_forward</span>
+            </div>
           </div>
-          <div className="flex flex-wrap gap-3">
-            {[
-              { time: '12:00 – 12:30', status: 'booked'    },
-              { time: '12:30 – 12:40', status: 'buffer'    },
-              { time: '12:40 – 01:10', status: 'available' },
-              { time: '01:10 – 01:20', status: 'buffer'    },
-              { time: '01:20 – 01:50', status: 'available' },
-              { time: '01:50 – 02:00', status: 'buffer'    },
-              { time: '02:00 – 02:30', status: 'booked'    },
-            ].map(slot => {
-              const colors = { available: '#0E8A5E', buffer: '#2A6099', booked: '#fd8451' }
-              const c = colors[slot.status as keyof typeof colors]
-              return (
-                <div
-                  key={slot.time}
-                  className="flex items-center gap-2 px-4 py-2 rounded-xl"
-                  style={{ background: `${c}18`, border: `1px solid ${c}40` }}
-                >
-                  <span className="w-2 h-2 rounded-full" style={{ background: c }}></span>
-                  <span style={{ fontSize: '12px', fontWeight: 700, color: `${c}cc` }}>{slot.time}</span>
-                  <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.08em', color: `${c}60`, textTransform: 'uppercase' }}>
-                    {slot.status === 'buffer' ? '10m buffer' : slot.status}
-                  </span>
-                </div>
-              )
-            })}
-          </div>
-          <p style={{ fontSize: '12px', color: 'rgba(162,206,213,0.4)', marginTop: '16px' }}>
-            The buffer is automatic — no one can book the next slot until the machine is physically clear.
-          </p>
-        </div> */}
+        </div>
       </div>
     </section>
   )

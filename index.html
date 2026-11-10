@@ -40,6 +40,46 @@
               'neo-teal':    '4px 4px 12px rgba(11,60,66,0.35), -2px -2px 8px rgba(255,255,255,0.5)',
             },
             keyframes: {
+              brownian1: {
+                '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+                '20%':      { transform: 'translate3d(6px, -10px, 0) rotate(2deg)' },
+                '40%':      { transform: 'translate3d(-7px, -4px, 0) rotate(-1.5deg)' },
+                '60%':      { transform: 'translate3d(5px, 8px, 0) rotate(1deg)' },
+                '80%':      { transform: 'translate3d(-5px, -6px, 0) rotate(-2deg)' },
+              },
+              brownian2: {
+                '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+                '25%':      { transform: 'translate3d(-7px, 8px, 0) rotate(-2deg)' },
+                '50%':      { transform: 'translate3d(6px, -9px, 0) rotate(2.5deg)' },
+                '75%':      { transform: 'translate3d(-4px, -6px, 0) rotate(-1deg)' },
+              },
+              brownian3: {
+                '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+                '30%':      { transform: 'translate3d(8px, 6px, 0) rotate(1.5deg)' },
+                '55%':      { transform: 'translate3d(-6px, -10px, 0) rotate(-2deg)' },
+                '80%':      { transform: 'translate3d(5px, -4px, 0) rotate(2deg)' },
+              },
+              brownian4: {
+                '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+                '25%':      { transform: 'translate3d(6px, -7px, 0) rotate(2deg)' },
+                '50%':      { transform: 'translate3d(-6px, 6px, 0) rotate(-1.5deg)' },
+                '75%':      { transform: 'translate3d(7px, 4px, 0) rotate(1deg)' },
+              },
+              marqueeLTR: {
+                '0%':   { transform: 'translateX(-50%)' },
+                '100%': { transform: 'translateX(0%)' },
+              },
+              vibrate: {
+                '0%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+                '2%':       { transform: 'translate3d(-2px, 1.5px, 0) rotate(-1.5deg)' },
+                '4%':       { transform: 'translate3d(2.5px, -1.5px, 0) rotate(2deg)' },
+                '6%':       { transform: 'translate3d(-2.5px, -1px, 0) rotate(-1deg)' },
+                '8%':       { transform: 'translate3d(2px, 2px, 0) rotate(1.5deg)' },
+                '10%':      { transform: 'translate3d(-1.5px, 0.5px, 0) rotate(-1deg)' },
+                '12%':      { transform: 'translate3d(1.5px, -1px, 0) rotate(1deg)' },
+                '14%':      { transform: 'translate3d(-1px, 1px, 0) rotate(-0.5deg)' },
+                '16%, 100%': { transform: 'translate3d(0, 0, 0) rotate(0deg)' },
+              },
               floatY: {
                 '0%,100%': { transform: 'translateY(0px) rotate(0deg)' },
                 '50%':     { transform: 'translateY(-16px) rotate(3deg)' },
@@ -66,6 +106,12 @@
               },
             },
             animation: {
+              brownian1: 'brownian1 7s ease-in-out infinite',
+              brownian2: 'brownian2 8s ease-in-out infinite',
+              brownian3: 'brownian3 7.5s ease-in-out infinite',
+              brownian4: 'brownian4 6.5s ease-in-out infinite',
+              vibrate:   'vibrate 2.4s ease-in-out infinite',
+              marqueeLTR: 'marqueeLTR 35s linear infinite',
               floatY:    'floatY 5s ease-in-out infinite',
               floatX:    'floatX 6s ease-in-out infinite',
               floatY2:   'floatY 7s ease-in-out infinite 1.5s',
@@ -85,6 +131,47 @@
       body { background: #dde8ea; font-family: 'Plus Jakarta Sans', sans-serif; color: #0b3c42; overflow-x: hidden; width: 100%; }
       ::-webkit-scrollbar { display: none; }
       .marquee-track { display: flex; width: max-content; }
+
+      @keyframes brownian1 {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        20%      { transform: translate3d(6px, -10px, 0) rotate(2deg); }
+        40%      { transform: translate3d(-7px, -4px, 0) rotate(-1.5deg); }
+        60%      { transform: translate3d(5px, 8px, 0) rotate(1deg); }
+        80%      { transform: translate3d(-5px, -6px, 0) rotate(-2deg); }
+      }
+      @keyframes brownian2 {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        25%      { transform: translate3d(-7px, 8px, 0) rotate(-2deg); }
+        50%      { transform: translate3d(6px, -9px, 0) rotate(2.5deg); }
+        75%      { transform: translate3d(-4px, -6px, 0) rotate(-1deg); }
+      }
+      @keyframes brownian3 {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        30%      { transform: translate3d(8px, 6px, 0) rotate(1.5deg); }
+        55%      { transform: translate3d(-6px, -10px, 0) rotate(-2deg); }
+        80%      { transform: translate3d(5px, -4px, 0) rotate(2deg); }
+      }
+      @keyframes brownian4 {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        25%      { transform: translate3d(6px, -7px, 0) rotate(2deg); }
+        50%      { transform: translate3d(-6px, 6px, 0) rotate(-1.5deg); }
+        75%      { transform: translate3d(7px, 4px, 0) rotate(1deg); }
+      }
+      @keyframes marqueeLTR {
+        0%   { transform: translateX(-50%); }
+        100% { transform: translateX(0%); }
+      }
+      @keyframes vibrate {
+        0%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+        2%       { transform: translate3d(-2px, 1.5px, 0) rotate(-1.5deg); }
+        4%       { transform: translate3d(2.5px, -1.5px, 0) rotate(2deg); }
+        6%       { transform: translate3d(-2.5px, -1px, 0) rotate(-1deg); }
+        8%       { transform: translate3d(2px, 2px, 0) rotate(1.5deg); }
+        10%      { transform: translate3d(-1.5px, 0.5px, 0) rotate(-1deg); }
+        12%      { transform: translate3d(1.5px, -1px, 0) rotate(1deg); }
+        14%      { transform: translate3d(-1px, 1px, 0) rotate(-0.5deg); }
+        16%, 100% { transform: translate3d(0, 0, 0) rotate(0deg); }
+      }
 
       /* Neumorphic utility classes */
       .neo        { background: #dde8ea; }
