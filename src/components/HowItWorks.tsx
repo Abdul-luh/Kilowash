@@ -106,7 +106,7 @@ export default function HowItWorks() {
         </div>
 
         {/* Slot schedule */}
-        <div
+        {/* <div
           ref={scheduleRef}
           className="mt-10 p-8 rounded-2xl"
           style={{ background: '#0b3c42', boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3), inset 0 -2px 8px rgba(255,255,255,0.05)' }}
@@ -148,7 +148,7 @@ export default function HowItWorks() {
           <p style={{ fontSize: '12px', color: 'rgba(162,206,213,0.4)', marginTop: '16px' }}>
             The buffer is automatic — no one can book the next slot until the machine is physically clear.
           </p>
-        </div>
+        </div> */}
       </div>
     </section>
   )

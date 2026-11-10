@@ -35,7 +35,7 @@ export default function Footer() {
               className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-full transition-all"
               style={{ background: '#fd8451', boxShadow: '4px 4px 10px rgba(253,132,81,0.4), -2px -2px 6px rgba(255,255,255,0.5)', textDecoration: 'none' }}
             >
-              <span className="w-2 h-2 rounded-full bg-white" style={{ boxShadow: '0 0 5px rgba(255,255,255,0.8)' }}></span>
+              <span className="material-symbols-outlined text-white text-[15px]">sensors</span>
               <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: 'white', textTransform: 'uppercase' }}>Join the Waitlist</span>
             </a>
           </div>

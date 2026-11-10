@@ -5,11 +5,45 @@ import HeroImg from '../assets/Hero.png'
 import fila from '../assets/fila.png'
 
 const bays = [
-  { id: 'BAY-01', type: 'WASHER',  status: 'IDLE',       statusColor: '#0E8A5E', cap: '9.0 KG',         detail: '100% Ready',   cta: 'Lock Slot' },
-  { id: 'BAY-02', type: 'HEAVY',   status: 'IN-USE',     statusColor: '#fd8451', cap: 'Cycle 3/3 Rinse', detail: '14m left',     cta: null },
-  { id: 'BAY-03', type: 'WASHER',  status: '10M BUFFER', statusColor: '#2A6099', cap: 'Unload Window',  detail: '06:21 REMAIN', cta: null },
-  { id: 'BAY-04', type: 'ECO',     status: 'IDLE',       statusColor: '#0E8A5E', cap: '7.5 KG',         detail: '100% Ready',   cta: 'Lock Slot' },
+  {
+    id: 'BAY-01', type: 'WASHER',  status: 'IDLE',       statusColor: '#0E8A5E', cap: '9.0 KG',          detail: '100% Ready',   cta: 'Lock Slot',
+    slots: [
+      { time: '12:00–12:30', s: 'booked'    },
+      { time: '12:30–12:40', s: 'buffer'    },
+      { time: '12:40–01:10', s: 'available' },
+      { time: '01:10–01:40', s: 'available' },
+    ],
+  },
+  {
+    id: 'BAY-02', type: 'HEAVY',   status: 'IN-USE',     statusColor: '#fd8451', cap: 'Cycle 3/3 Rinse',  detail: '14m left',     cta: null,
+    slots: [
+      { time: '12:00–12:45', s: 'booked'    },
+      { time: '12:45–12:55', s: 'buffer'    },
+      { time: '12:55–01:40', s: 'booked'    },
+      { time: '01:40–01:50', s: 'buffer'    },
+    ],
+  },
+  {
+    id: 'BAY-03', type: 'WASHER',  status: '10M BUFFER', statusColor: '#2A6099', cap: 'Unload Window',   detail: '06:21 REMAIN', cta: null,
+    slots: [
+      { time: '11:30–12:00', s: 'booked'    },
+      { time: '12:00–12:10', s: 'buffer'    },
+      { time: '12:10–12:40', s: 'available' },
+      { time: '12:40–01:10', s: 'available' },
+    ],
+  },
+  {
+    id: 'BAY-04', type: 'ECO',     status: 'IDLE',       statusColor: '#0E8A5E', cap: '7.5 KG',          detail: '100% Ready',   cta: 'Lock Slot',
+    slots: [
+      { time: '12:00–12:30', s: 'available' },
+      { time: '12:30–01:00', s: 'available' },
+      { time: '01:00–01:30', s: 'available' },
+      { time: '01:30–02:00', s: 'available' },
+    ],
+  },
 ]
+
+const slotColors: Record<string, string> = { available: '#0E8A5E', buffer: '#2A6099', booked: '#fd8451' }
 
 export default function Hero() {
   return (
@@ -226,6 +260,26 @@ export default function Hero() {
                       <span style={{ fontSize: '13px', fontWeight: 800, color: '#0b3c42' }}>{bay.detail}</span>
                     </div>
                   </div>
+
+                  {/* Mini slot schedule */}
+                  <div className="flex flex-col gap-1.5 pt-1">
+                    <div style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em', color: '#8aa8ab', textTransform: 'uppercase' }}>Today's Slots</div>
+                    {bay.slots.map(slot => {
+                      const c = slotColors[slot.s]
+                      return (
+                        <div key={slot.time} className="flex items-center justify-between px-2.5 py-1.5 rounded-lg" style={{ background: `${c}14` }}>
+                          <div className="flex items-center gap-1.5">
+                            <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: c }}></span>
+                            <span style={{ fontSize: '10px', fontWeight: 600, color: '#5a7578' }}>{slot.time}</span>
+                          </div>
+                          <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: c }}>
+                            {slot.s === 'buffer' ? 'buffer' : slot.s}
+                          </span>
+                        </div>
+                      )
+                    })}
+                  </div>
+
                   {bay.cta && (
                     <a
                       href="#waitlist"
