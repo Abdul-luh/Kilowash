@@ -6,39 +6,47 @@ import fila from '../assets/fila.png'
 
 const bays = [
   {
-    id: 'BAY-01', type: 'WASHER',  status: 'IDLE',       statusColor: '#0E8A5E', cap: '9.0 KG',          detail: '100% Ready',   cta: 'Lock Slot',
+    id: 'BAY-01', type: 'WASHER',  status: 'IDLE',       statusColor: '#0E8A5E', cap: '9.0 KG',         detail: '100% Ready',   cta: 'Lock Slot',
+    location: 'Middle Block',
     slots: [
-      { time: '12:00–12:30', s: 'booked'    },
-      { time: '12:30–12:40', s: 'buffer'    },
-      { time: '12:40–01:10', s: 'available' },
-      { time: '01:10–01:40', s: 'available' },
+      { time: '8:05–8:35',   s: 'booked'    },
+      { time: '8:35–8:45',   s: 'buffer'    },
+      { time: '9:50–10:20',  s: 'booked'    },
+      { time: '10:20–10:30', s: 'buffer'    },
+      { time: '10:30–11:00', s: 'available' },
     ],
   },
   {
-    id: 'BAY-02', type: 'HEAVY',   status: 'IN-USE',     statusColor: '#fd8451', cap: 'Cycle 3/3 Rinse',  detail: '14m left',     cta: null,
+    id: 'BAY-02', type: 'HEAVY',   status: 'IN-USE',     statusColor: '#fd8451', cap: 'Cycle 3/3 Rinse', detail: '14m left',     cta: null,
+    location: 'Female Hostel',
     slots: [
-      { time: '12:00–12:45', s: 'booked'    },
-      { time: '12:45–12:55', s: 'buffer'    },
-      { time: '12:55–01:40', s: 'booked'    },
-      { time: '01:40–01:50', s: 'buffer'    },
+      { time: '7:30–8:15',   s: 'booked'    },
+      { time: '8:15–8:25',   s: 'buffer'    },
+      { time: '9:00–9:45',   s: 'booked'    },
+      { time: '9:45–9:55',   s: 'buffer'    },
+      { time: '11:20–12:05', s: 'available' },
     ],
   },
   {
-    id: 'BAY-03', type: 'WASHER',  status: '10M BUFFER', statusColor: '#2A6099', cap: 'Unload Window',   detail: '06:21 REMAIN', cta: null,
+    id: 'BAY-03', type: 'WASHER',  status: '10M BUFFER', statusColor: '#2A6099', cap: 'Unload Window',  detail: '06:21 REMAIN', cta: null,
+    location: 'PDS',
     slots: [
-      { time: '11:30–12:00', s: 'booked'    },
-      { time: '12:00–12:10', s: 'buffer'    },
-      { time: '12:10–12:40', s: 'available' },
-      { time: '12:40–01:10', s: 'available' },
+      { time: '8:40–9:10',   s: 'booked'    },
+      { time: '9:10–9:20',   s: 'buffer'    },
+      { time: '10:05–10:35', s: 'booked'    },
+      { time: '10:35–10:45', s: 'buffer'    },
+      { time: '10:45–11:15', s: 'available' },
     ],
   },
   {
-    id: 'BAY-04', type: 'ECO',     status: 'IDLE',       statusColor: '#0E8A5E', cap: '7.5 KG',          detail: '100% Ready',   cta: 'Lock Slot',
+    id: 'BAY-04', type: 'ECO',     status: 'IDLE',       statusColor: '#0E8A5E', cap: '7.5 KG',         detail: '100% Ready',   cta: 'Lock Slot',
+    location: 'Downtown',
     slots: [
-      { time: '12:00–12:30', s: 'available' },
-      { time: '12:30–01:00', s: 'available' },
-      { time: '01:00–01:30', s: 'available' },
-      { time: '01:30–02:00', s: 'available' },
+      { time: '7:55–8:25',   s: 'booked'    },
+      { time: '8:25–8:35',   s: 'buffer'    },
+      { time: '9:30–10:00',  s: 'available' },
+      { time: '10:00–10:30', s: 'available' },
+      { time: '11:00–11:30', s: 'available' },
     ],
   },
 ]
@@ -254,7 +262,7 @@ export default function Hero() {
 
                 <div className="p-4 flex flex-col gap-3 flex-1 justify-between">
                   <div>
-                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#8aa8ab', textTransform: 'uppercase' }}>{bay.id} / {bay.type}</div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#8aa8ab', textTransform: 'uppercase' }}>{bay.id} · {bay.location}</div>
                     <div className="flex items-center justify-between mt-1">
                       <span style={{ fontSize: '12px', fontWeight: 600, color: '#5a7578' }}>{bay.cap}</span>
                       <span style={{ fontSize: '13px', fontWeight: 800, color: '#0b3c42' }}>{bay.detail}</span>
