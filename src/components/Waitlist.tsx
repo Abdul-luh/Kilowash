@@ -1,5 +1,7 @@
 import { useState } from 'react'
 
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string
+
 const schools = [
   'Federal University of Technology Owerri (FUTO)',
   'University of Lagos (UNILAG)',
@@ -7,18 +9,29 @@ const schools = [
   'University of Ibadan (UI)',
   'Obafemi Awolowo University (OAU)',
   'University of Nigeria Nsukka (UNN)',
+  'Lagos State University (LASU)',
   'Other',
 ]
 
 export default function Waitlist() {
   const [email, setEmail] = useState('')
   const [school, setSchool] = useState('')
-  const [done, setDone] = useState(false)
+  const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
-  function handleSubmit(e: React.FormEvent) {
+  async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!email || !school) return
-    setDone(true)
+    setStatus('loading')
+    try {
+      const res = await fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({ access_key: WEB3FORMS_KEY, email, school }),
+      })
+      setStatus(res.ok ? 'done' : 'error')
+    } catch {
+      setStatus('error')
+    }
   }
 
   return (
@@ -80,7 +93,7 @@ export default function Waitlist() {
               className="rounded-2xl p-8"
               style={{ background: '#dde8ea', boxShadow: 'inset 5px 5px 14px #b8c6c9, inset -5px -5px 14px #ffffff' }}
             >
-              {done ? (
+              {status === 'done' ? (
                 <div className="text-center py-8 flex flex-col items-center gap-4">
                   <div
                     className="w-16 h-16 rounded-2xl flex items-center justify-center"
@@ -95,6 +108,11 @@ export default function Waitlist() {
                 </div>
               ) : (
                 <form onSubmit={handleSubmit} className="flex flex-col gap-5">
+                  {status === 'error' && (
+                    <div className="px-4 py-3 rounded-xl" style={{ background: 'rgba(253,132,81,0.12)', fontSize: '12px', color: '#fd8451', fontWeight: 600 }}>
+                      Something went wrong. Please try again.
+                    </div>
+                  )}
                   <div>
                     <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '4px' }}>Step 01 / Identity</div>
                     <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0b3c42', letterSpacing: '-0.02em' }}>Join Kilowash Campus Network</h3>
@@ -139,11 +157,12 @@ export default function Waitlist() {
                   {/* Submit — raised tang */}
                   <button
                     type="submit"
+                    disabled={status === 'loading'}
                     className="w-full py-4 rounded-full flex items-center justify-center gap-2 transition-all group"
-                    style={{ background: '#fd8451', boxShadow: '5px 5px 12px rgba(253,132,81,0.45), -3px -3px 8px rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: 700, color: 'white', border: 'none', cursor: 'pointer' }}
+                    style={{ background: '#fd8451', boxShadow: '5px 5px 12px rgba(253,132,81,0.45), -3px -3px 8px rgba(255,255,255,0.5)', fontSize: '13px', fontWeight: 700, color: 'white', border: 'none', cursor: status === 'loading' ? 'not-allowed' : 'pointer', opacity: status === 'loading' ? 0.7 : 1 }}
                   >
-                    <span>Secure My Early Access</span>
-                    <span className="material-symbols-outlined text-[18px]">arrow_forward</span>
+                    <span>{status === 'loading' ? 'Submitting…' : 'Secure My Early Access'}</span>
+                    {status !== 'loading' && <span className="material-symbols-outlined text-[18px]">arrow_forward</span>}
                   </button>
 
                   <p style={{ fontSize: '11px', color: '#8aa8ab', textAlign: 'center' }}>
