@@ -60,7 +60,7 @@ export default function Hero() {
   {/* REMOVED TOP LEVEL TELEMETRY; IT WAS GIVING AI  */}
 
       {/* Main hero */}
-      <div className="w-full max-w-[1280px] mx-auto px-8 pt-16 pb-16 relative overflow-hidden">
+      <div className="w-full max-w-[1280px] mx-auto px-4 sm:px-6 md:px-8 pt-12 sm:pt-16 pb-16 relative overflow-hidden">
 
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
 
@@ -72,14 +72,17 @@ export default function Hero() {
 
             {/* Headline */}
             <div className="relative">
-              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.8rem, 6vw, 5rem)', lineHeight: 1.0, letterSpacing: '-0.04em', color: '#0b3c42' }}>
+              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em', color: '#0b3c42' }}>
                 Proper Wash.
               </h1>
-              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.8rem, 6vw, 5rem)', lineHeight: 1.0, letterSpacing: '-0.04em', color: '#fd8451' }}>
+              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em', color: '#fd8451' }}>
                 Zero Stress.
               </h1>
-              {/* Trousers — bottom-right of headline, near center */}
-              <div className="absolute -bottom-4 right-40 w-28 pointer-events-none" style={{ animation: 'floatY 6s ease-in-out infinite 0.5s', filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))' }}>
+              {/* Trousers — responsive positioning & sizing that stays clear of headline text */}
+              <div
+                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-10 lg:right-28 xl:right-36 w-14 sm:w-18 md:w-24 lg:w-28 pointer-events-none"
+                style={{ animation: 'floatY 6s ease-in-out infinite 0.5s', filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))' }}
+              >
                 <img src={trousers} alt="" className="w-full h-auto object-contain" />
               </div>
             </div>
@@ -213,7 +216,7 @@ export default function Hero() {
 
       {/* Bay snapshot */}
       <div className="w-full py-16" style={{ boxShadow: 'inset 0 6px 16px #b8c6c9, inset 0 -2px 8px #ffffff' }}>
-        <div className="max-w-[1280px] mx-auto px-8 flex flex-col gap-8">
+        <div className="max-w-[1280px] mx-auto px-4 sm:px-6 md:px-8 flex flex-col gap-8">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
               <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '4px' }}>Telemetric Audit</div>
