@@ -156,13 +156,13 @@ export default function Hero() {
                 </div>
               </div>
 
-              {/* Inset pill: ESP32 */}
+              {/* Inset pill: Solar */}
               <div
                 className="absolute bottom-16 -right-5 px-3 py-1.5 rounded-full flex items-center gap-1.5"
                 style={{ background: '#0b3c42', boxShadow: '4px 4px 10px rgba(11,60,66,0.4), -2px -2px 6px rgba(255,255,255,0.3)' }}
               >
-                <span className="material-symbols-outlined text-[14px] text-white">memory</span>
-                <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>ESP32 Verified</span>
+                <span className="material-symbols-outlined text-[14px]" style={{ color: '#fd8451' }}>wb_sunny</span>
+                <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: 'rgba(255,255,255,0.8)', textTransform: 'uppercase' }}>Solar Powered</span>
               </div>
             </div>
           </div>
