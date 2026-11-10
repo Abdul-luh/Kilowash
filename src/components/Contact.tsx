@@ -28,9 +28,9 @@ export default function Contact() {
   }
 
   const contacts = [
-    { icon: 'mail',      label: 'Email',    value: 'hello@kilowash.ng',   href: 'mailto:hello@kilowash.ng' },
-    { icon: 'call',      label: 'Phone',    value: '+234 800 632 426',     href: 'tel:+2348006324260' },
-    { icon: 'location_on', label: 'Base',   value: 'FUTO, Owerri — Imo State', href: '#' },
+    { icon: 'mail',       label: 'Email',  value: 'hello@kilowash.ng',              href: 'mailto:hello@kilowash.ng'  },
+    { icon: 'call',       label: 'Phone',  value: '+234 703 382 4496',              href: 'tel:+2347033824496'        },
+    { icon: 'location_on', label: 'Base', value: 'Lagos — Pilot at LASU', href: '#' },
   ]
 
   return (
