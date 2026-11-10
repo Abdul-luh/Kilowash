@@ -3,8 +3,56 @@ export default function Footer() {
   const legal  = ['Privacy Policy', 'Terms of Use', 'Refund Policy']
 
   return (
-    <footer className="w-full" style={{ background: '#dde8ea', boxShadow: 'inset 0 6px 16px #b8c6c9' }}>
-      <div className="max-w-[1280px] mx-auto px-8 py-16">
+    <footer className="w-full relative overflow-hidden" style={{ background: '#dde8ea', boxShadow: 'inset 0 6px 16px #b8c6c9' }}>
+
+      {/* Neumorphic inset depth shapes */}
+      <div className="absolute inset-0 pointer-events-none select-none" aria-hidden>
+
+        {/* Inset circle — top right (mirrors Waitlist) */}
+        <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
+          style={{ background: '#dde8ea', boxShadow: 'inset 8px 8px 20px #b8c6c9, inset -8px -8px 20px #ffffff', opacity: 0.5 }} />
+
+        {/* Inset circle — bottom left, large */}
+        <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full"
+          style={{ background: '#dde8ea', boxShadow: 'inset 10px 10px 24px #b0bec0, inset -10px -10px 24px #ffffff', opacity: 0.4 }} />
+
+        {/* Inset triangle — top left */}
+        <svg width="180" height="160" viewBox="0 0 180 160" className="absolute -top-4 left-32 opacity-40">
+          <polygon points="90,8 174,152 6,152"
+            fill="#dde8ea"
+            style={{ filter: 'url(#neo-inset)' }}/>
+          <defs>
+            <filter id="neo-inset" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="5" dy="5" stdDeviation="6" floodColor="#b0bec0" floodOpacity="0.8"/>
+              <feDropShadow dx="-4" dy="-4" stdDeviation="5" floodColor="#ffffff" floodOpacity="0.9"/>
+            </filter>
+          </defs>
+        </svg>
+
+        {/* Inset blob — mid right */}
+        <svg width="200" height="200" viewBox="0 0 200 200" className="absolute top-1/2 -right-10 -translate-y-1/2 opacity-35">
+          <path d="M100 20 C138 14 172 44 178 82 C186 124 162 166 124 178 C86 190 44 170 26 134 C8 98 18 52 52 32 C66 24 82 22 100 20Z"
+            fill="#dde8ea"
+            style={{ filter: 'url(#neo-blob)' }}/>
+          <defs>
+            <filter id="neo-blob" x="-20%" y="-20%" width="140%" height="140%">
+              <feDropShadow dx="6" dy="6" stdDeviation="7" floodColor="#b0bec0" floodOpacity="0.8"/>
+              <feDropShadow dx="-5" dy="-5" stdDeviation="6" floodColor="#ffffff" floodOpacity="0.9"/>
+            </filter>
+          </defs>
+        </svg>
+
+        {/* Inset small circle — bottom center */}
+        <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full"
+          style={{ background: '#dde8ea', boxShadow: 'inset 5px 5px 12px #b8c6c9, inset -5px -5px 12px #ffffff', opacity: 0.45 }} />
+
+        {/* Inset squircle — top center */}
+        <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-40 h-40"
+          style={{ background: '#dde8ea', borderRadius: '40%', boxShadow: 'inset 7px 7px 16px #b0bec0, inset -7px -7px 16px #ffffff', opacity: 0.35 }} />
+
+      </div>
+
+      <div className="max-w-[1280px] mx-auto px-8 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
 
           {/* Brand */}
@@ -29,7 +77,6 @@ export default function Footer() {
             <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#8aa8ab', maxWidth: '280px' }}>
               Solar-powered automated campus laundry. Book online, unlock in seconds, no light issues.
             </p>
-            {/* Waitlist CTA pill */}
             <a
               href="#waitlist"
               className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-full transition-all"
@@ -71,14 +118,14 @@ export default function Footer() {
           </div>
         </div>
 
-        {/* Bottom bar — inset divider */}
+        {/* Bottom bar */}
         <div
           className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8"
           style={{ borderTop: '1px solid rgba(184,198,201,0.5)' }}
         >
           <p style={{ fontSize: '12px', color: '#8aa8ab' }}>© 2025 Kilowash. Smart Campus Laundry IoT Network. All rights reserved.</p>
           <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: '#8aa8ab', textTransform: 'uppercase' }}>
-            Active Protocol: Node-FUTO-01
+            Active Protocol: Node-LASU-01
           </span>
         </div>
       </div>
