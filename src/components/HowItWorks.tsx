@@ -111,8 +111,12 @@ export default function HowItWorks() {
           className="mt-10 p-8 rounded-2xl"
           style={{ background: '#0b3c42', boxShadow: 'inset 0 4px 12px rgba(0,0,0,0.3), inset 0 -2px 8px rgba(255,255,255,0.05)' }}
         >
-          <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: 'rgba(162,206,213,0.5)', textTransform: 'uppercase', marginBottom: '16px' }}>
-            Sample Slot Schedule · Machine BAY-01 · LASU Hostel Block
+          <div className="mb-6">
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.12em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '8px' }}>How Slots Work</div>
+            <h3 style={{ fontWeight: 800, fontSize: '1.2rem', color: 'white', letterSpacing: '-0.02em', marginBottom: '8px' }}>Your 30 minutes is yours — no overlap, ever.</h3>
+            <p style={{ fontSize: '13px', color: 'rgba(162,206,213,0.6)', lineHeight: 1.7, maxWidth: '560px' }}>
+              Every wash cycle is followed by a mandatory 10-minute unload buffer — so the next person can't start until you've cleared your clothes. Here's what a real afternoon looks like on one machine:
+            </p>
           </div>
           <div className="flex flex-wrap gap-3">
             {[
@@ -141,8 +145,8 @@ export default function HowItWorks() {
               )
             })}
           </div>
-          <p style={{ fontSize: '12px', color: 'rgba(162,206,213,0.35)', marginTop: '16px' }}>
-            Hard relay cut-off enforced at slot end. Lateness eats into your run time — not the next person's.
+          <p style={{ fontSize: '12px', color: 'rgba(162,206,213,0.4)', marginTop: '16px' }}>
+            The buffer is automatic — no one can book the next slot until the machine is physically clear.
           </p>
         </div>
       </div>

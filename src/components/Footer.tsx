@@ -29,14 +29,15 @@ export default function Footer() {
             <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#8aa8ab', maxWidth: '280px' }}>
               Solar-powered automated campus laundry. Book online, unlock in seconds, no light issues.
             </p>
-            {/* Status pill — inset */}
-            <div
-              className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-full"
-              style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 6px #b8c6c9, inset -2px -2px 6px #ffffff' }}
+            {/* Waitlist CTA pill */}
+            <a
+              href="#waitlist"
+              className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-full transition-all"
+              style={{ background: '#fd8451', boxShadow: '4px 4px 10px rgba(253,132,81,0.4), -2px -2px 6px rgba(255,255,255,0.5)', textDecoration: 'none' }}
             >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" style={{ boxShadow: '0 0 5px #10b981' }}></span>
-              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: '#5a7578', textTransform: 'uppercase' }}>System Operational</span>
-            </div>
+              <span className="w-2 h-2 rounded-full bg-white" style={{ boxShadow: '0 0 5px rgba(255,255,255,0.8)' }}></span>
+              <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: 'white', textTransform: 'uppercase' }}>Join the Waitlist</span>
+            </a>
           </div>
 
           {/* Platform links */}
