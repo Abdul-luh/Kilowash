@@ -1,6 +1,21 @@
+import { useState } from 'react'
+import LegalModal, { type LegalDocType } from './LegalModal'
+
 export default function Footer() {
+  const [modalOpen, setModalOpen] = useState(false)
+  const [activeDoc, setActiveDoc] = useState<LegalDocType>('refund')
+
   const links = ['How It Works', 'Pricing', 'FAQ', 'Contact']
-  const legal  = ['Privacy Policy', 'Terms of Use', 'Refund Policy']
+  const legalDocs: { name: string; type: LegalDocType }[] = [
+    { name: 'Privacy Policy', type: 'privacy' },
+    { name: 'Terms of Use',   type: 'terms' },
+    { name: 'Refund Policy',  type: 'refund' },
+  ]
+
+  function openLegal(doc: LegalDocType) {
+    setActiveDoc(doc)
+    setModalOpen(true)
+  }
 
   return (
     <footer className="w-full relative overflow-hidden" style={{ background: '#dde8ea', boxShadow: 'inset 0 6px 16px #b8c6c9' }}>
@@ -52,7 +67,7 @@ export default function Footer() {
 
       </div>
 
-      <div className="max-w-[1280px] mx-auto px-8 py-16 relative z-10">
+      <div className="max-w-[1280px] mx-auto px-4 sm:px-6 md:px-8 py-16 relative z-10">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-10 mb-12">
 
           {/* Brand */}
@@ -74,7 +89,7 @@ export default function Footer() {
                 <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: '#8aa8ab', textTransform: 'uppercase' }}>IoT Laundry Network</span>
               </div>
             </div>
-            <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#8aa8ab', maxWidth: '280px' }}>
+            <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#5a7578', maxWidth: '320px' }}>
               Solar-powered automated campus laundry. Book online, unlock in seconds, no light issues.
             </p>
             <a
@@ -94,7 +109,7 @@ export default function Footer() {
               <a
                 key={l}
                 href={`#${l.toLowerCase().replace(/ /g, '')}`}
-                className="transition-all"
+                className="transition-all hover:text-[#0b3c42]"
                 style={{ fontSize: '13px', fontWeight: 500, color: '#5a7578', textDecoration: 'none' }}
               >
                 {l}
@@ -104,16 +119,16 @@ export default function Footer() {
 
           {/* Legal links */}
           <div className="flex flex-col gap-3">
-            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8aa8ab', marginBottom: '4px' }}>Legal</div>
-            {legal.map(l => (
-              <a
-                key={l}
-                href="#"
-                className="transition-all"
-                style={{ fontSize: '13px', fontWeight: 500, color: '#5a7578', textDecoration: 'none' }}
+            <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', textTransform: 'uppercase', color: '#8aa8ab', marginBottom: '4px' }}>Legal & Policy</div>
+            {legalDocs.map(doc => (
+              <button
+                key={doc.type}
+                onClick={() => openLegal(doc.type)}
+                className="text-left transition-all hover:text-[#0b3c42] cursor-pointer"
+                style={{ fontSize: '13px', fontWeight: 500, color: '#5a7578', background: 'transparent', border: 'none', padding: 0 }}
               >
-                {l}
-              </a>
+                {doc.name}
+              </button>
             ))}
           </div>
         </div>
@@ -123,12 +138,20 @@ export default function Footer() {
           className="flex flex-col sm:flex-row items-center justify-between gap-4 pt-8"
           style={{ borderTop: '1px solid rgba(184,198,201,0.5)' }}
         >
-          <p style={{ fontSize: '12px', color: '#8aa8ab' }}>© 2025 Kilowash. Smart Campus Laundry IoT Network. All rights reserved.</p>
+          <p style={{ fontSize: '12px', color: '#8aa8ab' }}>© 2026 Kilowash. Smart Campus Laundry IoT Network. All rights reserved.</p>
           <span style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.08em', color: '#8aa8ab', textTransform: 'uppercase' }}>
             Active Protocol: Node-LASU-01
           </span>
         </div>
       </div>
+
+      {/* Legal Dialog Modal */}
+      <LegalModal
+        isOpen={modalOpen}
+        onClose={() => setModalOpen(false)}
+        activeDoc={activeDoc}
+        onSelectDoc={doc => setActiveDoc(doc)}
+      />
     </footer>
   )
 }

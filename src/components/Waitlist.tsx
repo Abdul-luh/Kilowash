@@ -35,12 +35,12 @@ export default function Waitlist() {
   }
 
   return (
-    <section id="waitlist" className="w-full py-20 px-8" style={{ background: '#dde8ea', boxShadow: 'inset 0 6px 16px #b8c6c9, inset 0 -6px 16px #ffffff' }}>
+    <section id="waitlist" className="w-full py-16 sm:py-20 px-4 sm:px-6 md:px-8" style={{ background: '#dde8ea', boxShadow: 'inset 0 6px 16px #b8c6c9, inset 0 -6px 16px #ffffff' }}>
       <div className="max-w-[1280px] mx-auto">
 
         {/* Outer raised container */}
         <div
-          className="rounded-3xl p-10 md:p-14 relative overflow-hidden"
+          className="rounded-3xl p-5 sm:p-8 md:p-12 lg:p-14 relative overflow-hidden"
           style={{ background: '#dde8ea', boxShadow: '12px 12px 28px #b0bec0, -12px -12px 28px #ffffff' }}
         >
           {/* Decorative inset circle top-right */}
@@ -49,7 +49,7 @@ export default function Waitlist() {
             style={{ background: '#dde8ea', boxShadow: 'inset 8px 8px 20px #b8c6c9, inset -8px -8px 20px #ffffff', opacity: 0.5 }}
           />
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center relative z-10">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10">
 
             {/* Left copy */}
             <div className="flex flex-col gap-6">
@@ -66,11 +66,11 @@ export default function Waitlist() {
               </h2>
 
               <p style={{ fontSize: '14px', lineHeight: 1.75, color: '#5a7578' }}>
-                Drop your school email and campus. We will notify you the moment Kilowash machines go live at your hostel — and you will get priority slot access for the first week.
+                Drop your email and campus. We will notify you the moment Kilowash machines go live at your hostel — and you will get priority slot access for the first week.
               </p>
 
-              {/* Stats — inset trays */}
-              <div className="flex gap-6 pt-2">
+              {/* Stats — inset trays in responsive 3-column grid */}
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2">
                 {[
                   { num: '3',      label: 'Campuses in pipeline' },
                   { num: '₦1,500', label: 'Per 30-min cycle' },
@@ -78,11 +78,11 @@ export default function Waitlist() {
                 ].map(s => (
                   <div
                     key={s.label}
-                    className="flex flex-col px-4 py-3 rounded-2xl"
+                    className="flex flex-col px-2.5 sm:px-4 py-2.5 sm:py-3 rounded-2xl min-w-0"
                     style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff' }}
                   >
-                    <span style={{ fontWeight: 800, fontSize: '1.4rem', letterSpacing: '-0.03em', color: '#fd8451' }}>{s.num}</span>
-                    <span style={{ fontSize: '11px', color: '#8aa8ab', marginTop: '2px' }}>{s.label}</span>
+                    <span style={{ fontWeight: 800, fontSize: 'clamp(1.1rem, 2.5vw, 1.4rem)', letterSpacing: '-0.03em', color: '#fd8451', lineHeight: 1.1 }}>{s.num}</span>
+                    <span className="text-[10px] sm:text-[11px] leading-tight mt-1 text-[#8aa8ab] break-words">{s.label}</span>
                   </div>
                 ))}
               </div>
@@ -90,7 +90,7 @@ export default function Waitlist() {
 
             {/* Right form — inset panel */}
             <div
-              className="rounded-2xl p-8"
+              className="rounded-2xl p-5 sm:p-8"
               style={{ background: '#dde8ea', boxShadow: 'inset 5px 5px 14px #b8c6c9, inset -5px -5px 14px #ffffff' }}
             >
               {status === 'done' ? (
@@ -120,7 +120,7 @@ export default function Waitlist() {
 
                   {/* Email input — inset */}
                   <div className="flex flex-col gap-1.5">
-                    <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8aa8ab' }}>School Email</label>
+                    <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8aa8ab' }}>Email Address</label>
                     <div className="relative flex items-center">
                       <span className="material-symbols-outlined absolute left-3 text-[18px]" style={{ color: '#8aa8ab' }}>alternate_email</span>
                       <input
@@ -128,7 +128,7 @@ export default function Waitlist() {
                         required
                         value={email}
                         onChange={e => setEmail(e.target.value)}
-                        placeholder="you@student.edu.ng"
+                        placeholder="you@email.com"
                         className="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition-all"
                         style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff', fontSize: '13px', color: '#0b3c42', border: 'none' }}
                       />
