@@ -10,45 +10,45 @@ export default function Footer() {
 
         {/* Inset circle — top right (mirrors Waitlist) */}
         <div className="absolute -top-16 -right-16 w-64 h-64 rounded-full"
-          style={{ background: '#dde8ea', boxShadow: 'inset 8px 8px 20px #b8c6c9, inset -8px -8px 20px #ffffff', opacity: 0.5 }} />
+          style={{ background: '#dde8ea', boxShadow: 'inset 14px 14px 32px #a8b8bc, inset -14px -14px 32px #ffffff', opacity: 0.65 }} />
 
         {/* Inset circle — bottom left, large */}
         <div className="absolute -bottom-20 -left-20 w-80 h-80 rounded-full"
-          style={{ background: '#dde8ea', boxShadow: 'inset 10px 10px 24px #b0bec0, inset -10px -10px 24px #ffffff', opacity: 0.4 }} />
+          style={{ background: '#dde8ea', boxShadow: 'inset 16px 16px 36px #a4b4b8, inset -16px -16px 36px #ffffff', opacity: 0.55 }} />
 
         {/* Inset triangle — top left */}
-        <svg width="180" height="160" viewBox="0 0 180 160" className="absolute -top-4 left-32 opacity-40">
+        <svg width="180" height="160" viewBox="0 0 180 160" className="absolute -top-4 left-32 opacity-55">
           <polygon points="90,8 174,152 6,152"
             fill="#dde8ea"
             style={{ filter: 'url(#neo-inset)' }}/>
           <defs>
             <filter id="neo-inset" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="5" dy="5" stdDeviation="6" floodColor="#b0bec0" floodOpacity="0.8"/>
-              <feDropShadow dx="-4" dy="-4" stdDeviation="5" floodColor="#ffffff" floodOpacity="0.9"/>
+              <feDropShadow dx="7" dy="7" stdDeviation="9" floodColor="#a8b8bc" floodOpacity="1"/>
+              <feDropShadow dx="-6" dy="-6" stdDeviation="8" floodColor="#ffffff" floodOpacity="1"/>
             </filter>
           </defs>
         </svg>
 
         {/* Inset blob — mid right */}
-        <svg width="200" height="200" viewBox="0 0 200 200" className="absolute top-1/2 -right-10 -translate-y-1/2 opacity-35">
+        <svg width="200" height="200" viewBox="0 0 200 200" className="absolute top-1/2 -right-10 -translate-y-1/2 opacity-50">
           <path d="M100 20 C138 14 172 44 178 82 C186 124 162 166 124 178 C86 190 44 170 26 134 C8 98 18 52 52 32 C66 24 82 22 100 20Z"
             fill="#dde8ea"
             style={{ filter: 'url(#neo-blob)' }}/>
           <defs>
             <filter id="neo-blob" x="-20%" y="-20%" width="140%" height="140%">
-              <feDropShadow dx="6" dy="6" stdDeviation="7" floodColor="#b0bec0" floodOpacity="0.8"/>
-              <feDropShadow dx="-5" dy="-5" stdDeviation="6" floodColor="#ffffff" floodOpacity="0.9"/>
+              <feDropShadow dx="9" dy="9" stdDeviation="10" floodColor="#a8b8bc" floodOpacity="1"/>
+              <feDropShadow dx="-7" dy="-7" stdDeviation="9" floodColor="#ffffff" floodOpacity="1"/>
             </filter>
           </defs>
         </svg>
 
         {/* Inset small circle — bottom center */}
         <div className="absolute bottom-8 left-1/2 -translate-x-1/2 w-24 h-24 rounded-full"
-          style={{ background: '#dde8ea', boxShadow: 'inset 5px 5px 12px #b8c6c9, inset -5px -5px 12px #ffffff', opacity: 0.45 }} />
+          style={{ background: '#dde8ea', boxShadow: 'inset 9px 9px 20px #a8b8bc, inset -9px -9px 20px #ffffff', opacity: 0.6 }} />
 
         {/* Inset squircle — top center */}
         <div className="absolute -top-8 left-1/2 -translate-x-1/2 w-40 h-40"
-          style={{ background: '#dde8ea', borderRadius: '40%', boxShadow: 'inset 7px 7px 16px #b0bec0, inset -7px -7px 16px #ffffff', opacity: 0.35 }} />
+          style={{ background: '#dde8ea', borderRadius: '40%', boxShadow: 'inset 12px 12px 28px #a4b4b8, inset -12px -12px 28px #ffffff', opacity: 0.5 }} />
 
       </div>
 
