@@ -1,0 +1,21 @@
+{
+  "name": "Kilowash",
+  "short_name": "Kilowash",
+  "description": "Smart, solar-powered campus self-service laundry at LASU, Lagos. Book a 30-minute bay online, get a 4-digit PIN, and wash for ₦1,500.",
+  "start_url": "/",
+  "display": "standalone",
+  "theme_color": "#dde8ea",
+  "background_color": "#dde8ea",
+  "icons": [
+    {
+      "src": "/favicon.png",
+      "sizes": "220x219",
+      "type": "image/png"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

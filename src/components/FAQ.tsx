@@ -6,7 +6,7 @@ const faqs = [
   { q: 'What if electricity goes off during my wash?', a: 'Kilowash machines run entirely on solar power with a dedicated battery backup. Campus grid failures have zero effect on your cycle. In the rare event of a solar system fault lasting more than 4 minutes, the ESP32 microcontroller logs an interrupted cycle and triggers an automatic 100% wallet credit refund.' },
   { q: 'Can unregistered students view slot availability?', a: 'Yes. The Live Bay Timetable is publicly accessible across all university halls. You can see live cycle minutes, upcoming reservations, and active machine health before creating an account or paying for a slot.' },
   { q: 'What if the previous person leaves their clothes in the machine?', a: 'You have a 10-minute buffer window between every slot specifically for unloading. If clothes are still in the machine when your slot starts, tap "Report Blocked Machine" in the app. The offending user receives a strike and a ₦500 penalty fee on their next booking. Three strikes result in a 7-day account suspension.' },
-  { q: 'Can I cancel or reschedule my booking?', a: 'Cancellations are allowed up to 30 minutes before your slot start time for a full wallet credit. Cancellations within 30 minutes of the slot are non-refundable. Rescheduling is free if done more than 1 hour in advance, subject to slot availability.' },
+  { q: 'Can I cancel or reschedule my booking?', a: 'All confirmed bookings are strictly final and non-refundable. A delay, missed slot, or forfeiture occupies bay capacity another student could have used — so rescheduling requires purchasing a new booking. Automatic wallet credit refunds apply only if a verified Kilowash solar or hardware fault interrupts your wash for more than 4 minutes.' },
 ]
 
 export default function FAQ() {
@@ -36,6 +36,8 @@ export default function FAQ() {
                 }}
               >
                 <button
+                  type="button"
+                  aria-expanded={isOpen}
                   className="w-full flex items-center justify-between gap-4 p-6 text-left"
                   onClick={() => setOpen(isOpen ? null : i)}
                 >

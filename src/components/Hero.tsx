@@ -81,24 +81,22 @@ export default function Hero() {
                   filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))',
                 }}
               >
-                <img src={foldedTs} alt="Folded T-shirts" className="w-full h-auto object-contain" />
+                <img src={foldedTs} alt="" aria-hidden="true" className="w-full h-auto object-contain" />
               </div>
 
-              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em', color: '#0b3c42' }}>
-                Proper Wash.
-              </h1>
-              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em', color: '#fd8451' }}>
-                Zero Stress.
+              <h1 style={{ fontWeight: 800, fontSize: 'clamp(2.4rem, 6vw, 5rem)', lineHeight: 1.05, letterSpacing: '-0.04em' }}>
+                <span className="block" style={{ color: '#0b3c42' }}>Proper Wash.</span>
+                <span className="block" style={{ color: '#fd8451' }}>Zero Stress.</span>
               </h1>
               {/* Trousers — responsive positioning & sizing that stays clear of headline text with Brownian motion */}
               <div
-                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-16 lg:right-28 xl:right-36 w-14 sm:w-18 md:w-24 lg:w-28 pointer-events-none z-10"
+                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-16 lg:right-28 xl:right-36 w-28w sm:w-18 md:w-24 lg:w-28 pointer-events-none z-10"
                 style={{
                   animation: 'brownian2 8s ease-in-out infinite 0.7s',
                   filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))',
                 }}
               >
-                <img src={trousers} alt="" className="w-full h-auto object-contain" />
+                <img src={trousers} alt="" aria-hidden="true" className="w-full h-auto object-contain" />
               </div>
             </div>
 
@@ -147,7 +145,7 @@ export default function Hero() {
                   filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.18))',
                 }}
               >
-                <img src={natives} alt="" className="w-full h-auto object-contain" />
+                <img src={natives} alt="" aria-hidden="true" className="w-full h-auto object-contain" />
               </div>
               {[
                 { label: 'Active Bays',    value: '18 / 20 Online',       accent: '#0b3c42' },
@@ -277,7 +275,7 @@ export default function Hero() {
                   className="relative overflow-hidden"
                   style={{ boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff', margin: '10px 10px 0', borderRadius: '1rem' }}
                 >
-                  <img src={machine} alt="" className="w-full h-28 object-cover" />
+                  <img src={machine} alt={`Kilowash ${bay.id} smart solar washing machine in ${bay.location}`} className="w-full h-28 object-cover" />
                   <div className="absolute inset-0" style={{ background: 'linear-gradient(to top, #dde8ea 0%, transparent 60%)' }}></div>
                   <span
                     className="absolute top-2 right-2 px-2 py-0.5 rounded-full flex items-center gap-1"

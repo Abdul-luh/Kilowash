@@ -213,7 +213,7 @@ export default function LegalModal({ isOpen, onClose, activeDoc, onSelectDoc }: 
               <section>
                 <h4 className="font-bold text-[#0b3c42] text-[14px] mb-1.5">4. Account Deletion Rights</h4>
                 <p>
-                  You retain the permanent right to inspect, modify, or permanently remove your email from our waitlist registry at any time by emailing privacy@kilowash.dev or contacting campus support.
+                  You retain the permanent right to inspect, modify, or permanently remove your email from our waitlist registry at any time by emailing hello@kilowash.ng or contacting campus support.
                 </p>
               </section>
             </>
