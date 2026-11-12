@@ -114,7 +114,7 @@ export default function Waitlist() {
                     </div>
                   )}
                   <div>
-                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '4px' }}>Step 01 / Identity</div>
+                    <div style={{ fontSize: '10px', fontWeight: 700, letterSpacing: '0.1em', color: '#fd8451', textTransform: 'uppercase', marginBottom: '4px' }}>Early Access Waitlist</div>
                     <h3 style={{ fontWeight: 700, fontSize: '1.1rem', color: '#0b3c42', letterSpacing: '-0.02em' }}>Join Kilowash Campus Network</h3>
                   </div>
 
