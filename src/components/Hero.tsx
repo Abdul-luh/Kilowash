@@ -90,7 +90,7 @@ export default function Hero() {
               </h1>
               {/* Trousers — responsive positioning & sizing that stays clear of headline text with Brownian motion */}
               <div
-                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-16 lg:right-28 xl:right-36 w-28w sm:w-18 md:w-24 lg:w-28 pointer-events-none z-10"
+                className="absolute -bottom-8 right-1 sm:-bottom-6 sm:right-6 md:right-16 lg:right-28 xl:right-36 w-28 sm:w-18 md:w-24 lg:w-28 pointer-events-none z-10"
                 style={{
                   animation: 'brownian2 8s ease-in-out infinite 0.7s',
                   filter: 'drop-shadow(3px 6px 8px rgba(11,60,66,0.22))',
