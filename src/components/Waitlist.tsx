@@ -1,32 +1,62 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useMemo } from 'react'
+import { NIGERIAN_INSTITUTIONS } from '../data/institutions'
 
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string
 
-const schools = [
-  'Federal University of Technology Owerri (FUTO)',
-  'University of Lagos (UNILAG)',
-  'Covenant University',
-  'University of Ibadan (UI)',
-  'Obafemi Awolowo University (OAU)',
-  'University of Nigeria Nsukka (UNN)',
-  'Lagos State University (LASU)',
-  'Other',
-]
-
 export default function Waitlist() {
   const [email, setEmail] = useState('')
-  const [school, setSchool] = useState('')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [selectedSchool, setSelectedSchool] = useState('')
+  const [customSchool, setCustomSchool] = useState('')
+  const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
+
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  // Filter institutions based on input search query
+  const filteredInstitutions = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase()
+    if (!q) return NIGERIAN_INSTITUTIONS.slice(0, 40)
+    return NIGERIAN_INSTITUTIONS.filter(inst => inst.toLowerCase().includes(q))
+  }, [searchQuery])
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  function handleSelectSchool(schoolName: string) {
+    setSelectedSchool(schoolName)
+    setSearchQuery(schoolName)
+    setCustomSchool('')
+    setIsOpen(false)
+  }
+
+  function handleSelectOther() {
+    setSelectedSchool('Other')
+    setSearchQuery('Other')
+    setIsOpen(false)
+  }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!email || !school) return
+    const finalSchool = selectedSchool === 'Other' 
+      ? customSchool.trim() 
+      : (selectedSchool || searchQuery.trim())
+
+    if (!email || !finalSchool) return
     setStatus('loading')
     try {
       const res = await fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({ access_key: WEB3FORMS_KEY, email, school }),
+        body: JSON.stringify({ access_key: WEB3FORMS_KEY, email, school: finalSchool }),
       })
       setStatus(res.ok ? 'done' : 'error')
     } catch {
@@ -72,7 +102,7 @@ export default function Waitlist() {
               {/* Stats — inset trays in responsive 3-column grid */}
               <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2">
                 {[
-                  { num: '3',      label: 'Campuses in pipeline' },
+                  { num: 'All',    label: 'Campuses eligible' },
                   { num: '₦1,500', label: 'Per 30-min cycle' },
                   { num: '0',      label: 'Queues. Ever.' },
                 ].map(s => (
@@ -135,24 +165,154 @@ export default function Waitlist() {
                     </div>
                   </div>
 
-                  {/* School select — inset */}
-                  <div className="flex flex-col gap-1.5">
-                    <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8aa8ab' }}>Your Campus</label>
-                    <div className="relative flex items-center">
-                      <span className="material-symbols-outlined absolute left-3 text-[18px]" style={{ color: '#8aa8ab' }}>apartment</span>
-                      <select
-                        required
-                        value={school}
-                        onChange={e => setSchool(e.target.value)}
-                        className="w-full appearance-none pl-10 pr-9 py-3 rounded-xl outline-none transition-all"
-                        style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff', fontSize: '13px', color: school ? '#0b3c42' : '#8aa8ab', border: 'none' }}
-                      >
-                        <option value="" disabled>Select your school</option>
-                        {schools.map(s => <option key={s} value={s}>{s}</option>)}
-                      </select>
-                      <span className="material-symbols-outlined absolute right-3 text-[18px] pointer-events-none" style={{ color: '#8aa8ab' }}>unfold_more</span>
+                  {/* Searchable Institution Field */}
+                  <div className="flex flex-col gap-1.5" ref={dropdownRef}>
+                    <div className="flex items-center justify-between">
+                      <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#8aa8ab' }}>
+                        Your Campus / Institution
+                      </label>
+                      {selectedSchool && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSelectedSchool('')
+                            setSearchQuery('')
+                            setCustomSchool('')
+                          }}
+                          className="text-[10px] text-[#fd8451] hover:underline font-semibold"
+                        >
+                          Clear
+                        </button>
+                      )}
+                    </div>
+
+                    <div className="relative">
+                      <div className="relative flex items-center">
+                        <span className="material-symbols-outlined absolute left-3 text-[18px]" style={{ color: '#8aa8ab' }}>school</span>
+                        <input
+                          type="text"
+                          required
+                          value={searchQuery}
+                          onChange={e => {
+                            setSearchQuery(e.target.value)
+                            setSelectedSchool('')
+                            setIsOpen(true)
+                          }}
+                          onFocus={() => setIsOpen(true)}
+                          placeholder="Type or search any Nigerian institution…"
+                          className="w-full pl-10 pr-9 py-3 rounded-xl outline-none transition-all"
+                          style={{
+                            background: '#dde8ea',
+                            boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff',
+                            fontSize: '13px',
+                            color: '#0b3c42',
+                            border: 'none',
+                          }}
+                        />
+                        <button
+                          type="button"
+                          tabIndex={-1}
+                          onClick={() => setIsOpen(!isOpen)}
+                          className="material-symbols-outlined absolute right-3 text-[18px] text-[#8aa8ab] hover:text-[#0b3c42] cursor-pointer"
+                        >
+                          {isOpen ? 'expand_less' : 'expand_more'}
+                        </button>
+                      </div>
+
+                      {/* Dropdown Options */}
+                      {isOpen && (
+                        <div
+                          className="absolute z-50 left-0 right-0 mt-2 max-h-60 overflow-y-auto rounded-2xl p-2 flex flex-col gap-1"
+                          style={{
+                            background: '#dde8ea',
+                            boxShadow: '8px 8px 20px #b0bec0, -8px -8px 20px #ffffff',
+                            border: '1px solid rgba(184, 198, 201, 0.4)',
+                          }}
+                        >
+                          {/* Option to type custom if query doesn't match */}
+                          {searchQuery.trim() && !filteredInstitutions.some(i => i.toLowerCase() === searchQuery.trim().toLowerCase()) && (
+                            <button
+                              type="button"
+                              onClick={() => handleSelectSchool(searchQuery.trim())}
+                              className="w-full text-left px-3 py-2.5 rounded-xl text-[12px] font-semibold flex items-center justify-between transition-colors"
+                              style={{ background: 'rgba(253, 132, 81, 0.12)', color: '#fd8451' }}
+                            >
+                              <span>Use "{searchQuery.trim()}"</span>
+                              <span className="material-symbols-outlined text-[16px]">add</span>
+                            </button>
+                          )}
+
+                          {filteredInstitutions.map(inst => (
+                            <button
+                              key={inst}
+                              type="button"
+                              onClick={() => handleSelectSchool(inst)}
+                              className="w-full text-left px-3 py-2 rounded-xl text-[12px] transition-colors flex items-center justify-between"
+                              style={{
+                                color: selectedSchool === inst ? '#fd8451' : '#0b3c42',
+                                fontWeight: selectedSchool === inst ? 700 : 500,
+                                background: selectedSchool === inst ? 'rgba(253, 132, 81, 0.1)' : 'transparent',
+                              }}
+                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(11, 60, 66, 0.06)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = selectedSchool === inst ? 'rgba(253, 132, 81, 0.1)' : 'transparent')}
+                            >
+                              <span className="truncate">{inst}</span>
+                              {selectedSchool === inst && (
+                                <span className="material-symbols-outlined text-[16px]">check</span>
+                              )}
+                            </button>
+                          ))}
+
+                          {filteredInstitutions.length === 0 && (
+                            <div className="px-3 py-2 text-[12px] text-[#8aa8ab] text-center">
+                              No matching campus found.
+                            </div>
+                          )}
+
+                          {/* Explicit "Other / My School is not listed" option */}
+                          <div className="pt-1 border-t border-[#b8c6c9]/30 mt-1">
+                            <button
+                              type="button"
+                              onClick={handleSelectOther}
+                              className="w-full text-left px-3 py-2 rounded-xl text-[12px] font-medium text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-2"
+                              onMouseEnter={e => (e.currentTarget.style.background = 'rgba(11, 60, 66, 0.06)')}
+                              onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}
+                            >
+                              <span className="material-symbols-outlined text-[16px] text-[#8aa8ab]">edit</span>
+                              <span>Other / My school isn't listed</span>
+                            </button>
+                          </div>
+                        </div>
+                      )}
                     </div>
                   </div>
+
+                  {/* Fallback custom input when 'Other' is explicitly selected */}
+                  {selectedSchool === 'Other' && (
+                    <div className="flex flex-col gap-1.5 animate-fadeIn">
+                      <label style={{ fontSize: '11px', fontWeight: 700, letterSpacing: '0.06em', textTransform: 'uppercase', color: '#fd8451' }}>
+                        Enter Your School Name
+                      </label>
+                      <div className="relative flex items-center">
+                        <span className="material-symbols-outlined absolute left-3 text-[18px]" style={{ color: '#fd8451' }}>edit_note</span>
+                        <input
+                          type="text"
+                          required
+                          value={customSchool}
+                          onChange={e => setCustomSchool(e.target.value)}
+                          placeholder="e.g. Anchor University, Lagos"
+                          className="w-full pl-10 pr-4 py-3 rounded-xl outline-none transition-all"
+                          style={{
+                            background: '#dde8ea',
+                            boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff',
+                            fontSize: '13px',
+                            color: '#0b3c42',
+                            border: '1px solid rgba(253, 132, 81, 0.3)',
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
 
                   {/* Submit — raised tang */}
                   <button
