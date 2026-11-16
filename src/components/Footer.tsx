@@ -86,7 +86,7 @@ export default function Footer() {
               </div>
               <div className="flex flex-col leading-none">
                 <span style={{ fontWeight: 800, fontSize: '1.1rem', letterSpacing: '-0.03em', color: '#0b3c42' }}>kilowash</span>
-                <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: '#8aa8ab', textTransform: 'uppercase' }}>IoT Laundry Network</span>
+                {/* <span style={{ fontSize: '9px', fontWeight: 700, letterSpacing: '0.12em', color: '#8aa8ab', textTransform: 'uppercase' }}>IoT Laundry Network</span> */}
               </div>
             </div>
             <p style={{ fontSize: '13px', lineHeight: 1.7, color: '#5a7578', maxWidth: '320px' }}>

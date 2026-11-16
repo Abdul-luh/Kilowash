@@ -31,7 +31,7 @@ export default function Navbar() {
           </div>
           <div className="flex flex-col leading-none">
             <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.03em', color: '#0b3c42' }}>kilowash</span>
-            <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.12em', color: '#5a7578', textTransform: 'uppercase' }} className="hidden sm:block">Automated Laundry Network</span>
+            {/* <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.12em', color: '#5a7578', textTransform: 'uppercase' }} className="hidden sm:block">Automated Laundry Network</span> */}
           </div>
         </a>
 
