@@ -26,7 +26,7 @@ export default function Navbar() {
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl flex items-center justify-center"
               style={{ background: '#fd8451', boxShadow: '2px 2px 6px rgba(253,132,81,0.5), -1px -1px 4px rgba(255,255,255,0.4)' }}
             >
-              <span className="material-symbols-outlined text-white text-[15px] sm:text-[16px]">local_laundry_service</span>
+              {/* <span className="material-symbols-outlined text-white text-[15px] sm:text-[16px]">laundry_service</span> */}
             </div>
           </div>
           <div className="flex flex-col leading-none">
@@ -95,7 +95,7 @@ export default function Navbar() {
               whiteSpace: 'nowrap',
             }}
           >
-            <span className="material-symbols-outlined text-[14px]">calendar_clock</span>
+            {/* <span className="material-symbols-outlined text-[14px]">calendar_clock</span> */}
             <span className="hidden sm:inline">Get Early Access</span>
             <span className="hidden min-[400px]:inline sm:hidden">Early Access</span>
             <span className="min-[400px]:hidden">Access</span>

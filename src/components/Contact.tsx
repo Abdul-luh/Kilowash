@@ -28,7 +28,7 @@ export default function Contact() {
   }
 
   const contacts = [
-    { icon: 'mail',       label: 'Email',  value: 'hello@kilowash.ng',              href: 'mailto:hello@kilowash.ng'  },
+    { icon: 'mail',       label: 'Email',  value: 'founders@kilowash.ng',              href: 'mailto:founders@kilowash.ng'  },
     { icon: 'call',       label: 'Phone',  value: '+234 703 382 4496',              href: 'tel:+2347033824496'        },
     { icon: 'location_on', label: 'Base', value: 'Lagos — Pilot at LASU', href: '#' },
   ]

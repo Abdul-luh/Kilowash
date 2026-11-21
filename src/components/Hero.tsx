@@ -115,7 +115,7 @@ export default function Hero() {
                   fontSize: '13px', fontWeight: 700, color: 'white', textDecoration: 'none',
                 }}
               >
-                <span className="material-symbols-outlined text-[18px]">calendar_clock</span>
+                {/* <span className="material-symbols-outlined text-[18px]">calendar_clock</span> */}
                 Book Your 30-Min Slot
               </a>
               <a

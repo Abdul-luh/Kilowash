@@ -21,7 +21,7 @@ Kilowash (`https://kilowash.ng`) is the landing page, live bay showcase, and ear
 - **`HowItWorks`** (`src/components/HowItWorks.tsx`) — 4-step booking flow (*Select Bay & Campus*, *Pick Slot & Pay*, *Get Your PIN*, *Unlock & Wash*) with desktop entrance stagger and a mobile 3D perspective reel supporting both vertical scroll and horizontal swipe
 - **`Pricing`** (`src/components/Pricing.tsx`) — Standard Wash (`₦1,500`), Heavy / Bulky (`₦1,800`), Delicate Express (`₦1,500`), and laundry comparison table
 - **`FAQ`** (`src/components/FAQ.tsx`) — accessible accordion covering strict clock slots, keypad PIN unlock, solar backup & fault protection, blocked-machine strikes, and the non-refundable booking policy
-- **`Waitlist` & `Contact`** (`src/components/Waitlist.tsx`, `src/components/Contact.tsx`) — early-access waitlist and direct campus team contact (`hello@kilowash.ng`, `+234 703 382 4496`)
+- **`Waitlist` & `Contact`** (`src/components/Waitlist.tsx`, `src/components/Contact.tsx`) — early-access waitlist and direct campus team contact (`founders@kilowash.ng`, `+234 703 382 4496`)
 - **`Footer` & `LegalModal`** (`src/components/Footer.tsx`, `src/components/LegalModal.tsx`) — frosted glassmorphic legal modal covering Privacy Policy, Terms of Use, and the strict No-Refund & Forfeiture Policy
 
 ## SEO & Web Assets
