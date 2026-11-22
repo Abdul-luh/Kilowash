@@ -1,4 +1,6 @@
 import machineImg from '../assets/the machine.png'
+import foldedTsImg from '../assets/folded Ts.png'
+import foldedShirtsImg from '../assets/folded-shirts.png'
 
 export interface Bay {
   id: string
@@ -19,6 +21,8 @@ export interface Bay {
 
 export interface BookingSlot {
   id: string
+  day: 'today' | 'tomorrow'
+  dayLabel: string
   timeLabel: string
   startTime: string
   endTime: string
@@ -58,7 +62,7 @@ export const INITIAL_BAYS: Bay[] = [
     capacity: '10kg Drum • Clean & Primed',
     type: 'standard',
     status: 'available',
-    statusLabel: 'AVAILABLE',
+    statusLabel: 'Available',
     rate: 1500,
     cycleDurationMinutes: 35,
     bufferMinutes: 10,
@@ -73,7 +77,7 @@ export const INITIAL_BAYS: Bay[] = [
     capacity: '10kg Drum • Active Spin Cycle',
     type: 'standard',
     status: 'busy',
-    statusLabel: 'BUSY • 14M',
+    statusLabel: 'Busy (14m)',
     rate: 1500,
     cycleDurationMinutes: 35,
     bufferMinutes: 10,
@@ -83,15 +87,28 @@ export const INITIAL_BAYS: Bay[] = [
   },
 ]
 
-export const TODAY_SLOTS: BookingSlot[] = [
-  { id: 'slot-1', timeLabel: '10:00 AM – 10:45 AM', startTime: '10:00 AM', endTime: '10:45 AM', isAvailable: false, isPast: true },
-  { id: 'slot-2', timeLabel: '11:00 AM – 11:45 AM', startTime: '11:00 AM', endTime: '11:45 AM', isAvailable: false, isPast: true },
-  { id: 'slot-3', timeLabel: '12:00 PM – 12:45 PM', startTime: '12:00 PM', endTime: '12:45 PM', isAvailable: false, isPast: false },
-  { id: 'slot-4', timeLabel: '01:00 PM – 01:45 PM', startTime: '01:00 PM', endTime: '01:45 PM', isAvailable: true, isPast: false },
-  { id: 'slot-5', timeLabel: '02:00 PM – 02:45 PM', startTime: '02:00 PM', endTime: '02:45 PM', isAvailable: true, isPast: false },
-  { id: 'slot-6', timeLabel: '03:00 PM – 03:45 PM', startTime: '03:00 PM', endTime: '03:45 PM', isAvailable: true, isPast: false },
-  { id: 'slot-7', timeLabel: '04:00 PM – 04:45 PM', startTime: '04:00 PM', endTime: '04:45 PM', isAvailable: true, isPast: false },
-  { id: 'slot-8', timeLabel: '05:00 PM – 05:45 PM', startTime: '05:00 PM', endTime: '05:45 PM', isAvailable: true, isPast: false },
+export const MULTI_DAY_SLOTS: BookingSlot[] = [
+  // Today's Slots
+  { id: 'today-1', day: 'today', dayLabel: 'Today', timeLabel: '10:00 AM – 10:45 AM', startTime: '10:00 AM', endTime: '10:45 AM', isAvailable: false, isPast: true },
+  { id: 'today-2', day: 'today', dayLabel: 'Today', timeLabel: '11:00 AM – 11:45 AM', startTime: '11:00 AM', endTime: '11:45 AM', isAvailable: false, isPast: true },
+  { id: 'today-3', day: 'today', dayLabel: 'Today', timeLabel: '12:00 PM – 12:45 PM', startTime: '12:00 PM', endTime: '12:45 PM', isAvailable: false, isPast: false },
+  { id: 'today-4', day: 'today', dayLabel: 'Today', timeLabel: '01:00 PM – 01:45 PM', startTime: '01:00 PM', endTime: '01:45 PM', isAvailable: true, isPast: false },
+  { id: 'today-5', day: 'today', dayLabel: 'Today', timeLabel: '02:00 PM – 02:45 PM', startTime: '02:00 PM', endTime: '02:45 PM', isAvailable: true, isPast: false },
+  { id: 'today-6', day: 'today', dayLabel: 'Today', timeLabel: '03:00 PM – 03:45 PM', startTime: '03:00 PM', endTime: '03:45 PM', isAvailable: true, isPast: false },
+  { id: 'today-7', day: 'today', dayLabel: 'Today', timeLabel: '04:00 PM – 04:45 PM', startTime: '04:00 PM', endTime: '04:45 PM', isAvailable: true, isPast: false },
+  { id: 'today-8', day: 'today', dayLabel: 'Today', timeLabel: '05:00 PM – 05:45 PM', startTime: '05:00 PM', endTime: '05:45 PM', isAvailable: true, isPast: false },
+
+  // Tomorrow's Slots (1 day ahead advance booking)
+  { id: 'tmr-1', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '08:00 AM – 08:45 AM', startTime: '08:00 AM', endTime: '08:45 AM', isAvailable: true, isPast: false },
+  { id: 'tmr-2', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '09:00 AM – 09:45 AM', startTime: '09:00 AM', endTime: '09:45 AM', isAvailable: true, isPast: false },
+  { id: 'tmr-3', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '10:00 AM – 10:45 AM', startTime: '10:00 AM', endTime: '10:45 AM', isAvailable: true, isPast: false },
+  { id: 'tmr-4', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '11:00 AM – 11:45 AM', startTime: '11:00 AM', endTime: '11:45 AM', isAvailable: true, isPast: false },
+  { id: 'tmr-5', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '12:00 PM – 12:45 PM', startTime: '12:00 PM', endTime: '12:45 PM', isAvailable: false, isPast: false },
+  { id: 'tmr-6', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '01:00 PM – 01:45 PM', startTime: '01:00 PM', endTime: '01:45 PM', isAvailable: true, isPast: false },
+  { id: 'tmr-7', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '02:00 PM – 02:45 PM', startTime: '02:00 PM', endTime: '02:45 PM', isAvailable: true, isPast: false },
+  { id: 'tmr-8', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '03:00 PM – 03:45 PM', startTime: '03:00 PM', endTime: '03:45 PM', isAvailable: true, isPast: false },
+  { id: 'tmr-9', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '04:00 PM – 04:45 PM', startTime: '04:00 PM', endTime: '04:45 PM', isAvailable: true, isPast: false },
+  { id: 'tmr-10', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '05:00 PM – 05:45 PM', startTime: '05:00 PM', endTime: '05:45 PM', isAvailable: true, isPast: false },
 ]
 
 export const MOCK_HISTORY: WashHistoryItem[] = [
@@ -127,4 +144,4 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   },
 ]
 
-export { machineImg }
+export { machineImg, foldedTsImg, foldedShirtsImg }

@@ -4,6 +4,8 @@ import {
   INITIAL_BAYS,
   MOCK_HISTORY,
   machineImg,
+  foldedTsImg,
+  foldedShirtsImg,
   type Bay,
   type BookingSlot,
   type ActiveCycle,
@@ -109,7 +111,7 @@ export default function Dashboard() {
         id: newBookingId,
         bayId: selectedBay.id,
         bayName: selectedBay.subname,
-        date: 'Today, Just Now',
+        date: slot.day === 'today' ? 'Today, Just Now' : 'Tomorrow (Advance)',
         time: slot.timeLabel,
         pin: randomPin,
         amount: addDetergent ? selectedBay.rate + 200 : selectedBay.rate,
@@ -178,7 +180,7 @@ export default function Dashboard() {
             className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-[#0b3c42]"
             style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
           >
-            <span className="material-symbols-outlined text-[15px] text-[#fd8451] animate-pulse">bolt</span>
+            <span className="material-symbols-outlined text-[15px] text-[#fd8451]">solar_power</span>
             <span>94% Solar</span>
           </div>
 
@@ -213,25 +215,63 @@ export default function Dashboard() {
         {/* ============================================================== */}
         {activeTab === 'bays' && (
           <>
-            {/* Active Wash & Keypad PIN Hero Card */}
+            {/* Active Wash & Keypad PIN Hero Card — Tactile Claymorphic with Inset Cloth Depth Shapes */}
             {activeCycle && (
               <section
-                className="relative w-full rounded-3xl p-5 sm:p-6 overflow-hidden flex flex-col gap-4 animate-fadeIn"
+                className="relative w-full rounded-3xl p-5 sm:p-7 overflow-hidden flex flex-col gap-5 animate-fadeIn"
                 style={{
                   background: '#dde8ea',
-                  boxShadow: '8px 8px 22px #b0bec0, -8px -8px 22px #ffffff',
+                  boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
                 }}
               >
-                {/* Decorative ambient glow */}
-                <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-[#fd8451]/15 blur-2xl pointer-events-none" />
-
-                {/* Top tags */}
-                <div className="flex items-center justify-between gap-2">
+                {/* Neumorphic Inset Depth Background Shapes (Cloth & Drum Motifs) */}
+                <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" aria-hidden>
+                  {/* Inset circular wash drum depth well */}
                   <div
-                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
+                    className="absolute -top-12 -right-12 w-48 h-48 rounded-full"
+                    style={{
+                      background: '#dde8ea',
+                      boxShadow: 'inset 8px 8px 18px #b8c6c9, inset -8px -8px 18px #ffffff',
+                      opacity: 0.7,
+                    }}
+                  />
+
+                  {/* Soft 3D Folded Clothing Motif floating gently in the background */}
+                  <img
+                    src={foldedTsImg}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute -top-4 -right-2 w-28 h-auto object-contain opacity-25 pointer-events-none"
+                    style={{ filter: 'drop-shadow(2px 4px 6px rgba(11,60,66,0.15))' }}
+                  />
+
+                  {/* Secondary folded cloth shape lower left */}
+                  <img
+                    src={foldedShirtsImg}
+                    alt=""
+                    aria-hidden="true"
+                    className="absolute -bottom-6 -left-6 w-24 h-auto object-contain opacity-15 pointer-events-none"
+                    style={{ filter: 'drop-shadow(2px 4px 6px rgba(11,60,66,0.1))' }}
+                  />
+
+                  {/* Inset curved stitch line */}
+                  <div
+                    className="absolute bottom-2 right-12 w-32 h-16 rounded-full"
+                    style={{
+                      background: '#dde8ea',
+                      boxShadow: 'inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff',
+                      opacity: 0.45,
+                    }}
+                  />
+                </div>
+
+                {/* Top tags with clear icons */}
+                <div className="flex items-center justify-between gap-2 relative z-10">
+                  <div
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
                     style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
                   >
-                    <span className="w-2 h-2 rounded-full bg-[#fd8451] animate-ping" />
+                    <span className="material-symbols-outlined text-[15px] text-[#fd8451]">sync</span>
                     <span>Active Cycle • {activeCycle.bayId}</span>
                   </div>
 
@@ -245,7 +285,7 @@ export default function Dashboard() {
                 </div>
 
                 {/* Center Visual & Countdown */}
-                <div className="flex items-center gap-4 sm:gap-6 pt-1">
+                <div className="flex items-center gap-4 sm:gap-6 pt-1 relative z-10">
                   {/* Recessed well with washer image and SVG progress ring */}
                   <div
                     className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl p-2 flex items-center justify-center"
@@ -274,7 +314,8 @@ export default function Dashboard() {
 
                   {/* Telemetry info */}
                   <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#8aa8ab]">
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#8aa8ab] flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px] text-[#5a7578]">schedule</span>
                       Remaining Wash Time
                     </span>
                     <div className="flex items-baseline gap-1.5 mt-0.5">
@@ -286,14 +327,17 @@ export default function Dashboard() {
                     <div className="flex items-center gap-2 mt-1 text-xs text-[#5a7578]">
                       <span className="truncate text-[#0b3c42] font-semibold">{activeCycle.washType}</span>
                       <span>•</span>
-                      <span className="text-[#fd8451] font-bold">{activeCycle.stage} Stage</span>
+                      <span className="text-[#fd8451] font-bold flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[13px]">cyclone</span>
+                        {activeCycle.stage} Stage
+                      </span>
                     </div>
                   </div>
                 </div>
 
                 {/* Keypad PIN Security Well */}
                 <div
-                  className="w-full rounded-2xl p-4 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
+                  className="w-full rounded-2xl p-4 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 relative z-10"
                   style={{
                     background: '#0b3c42',
                     boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.5), inset -2px -2px 6px rgba(255,255,255,0.1)',
@@ -311,7 +355,8 @@ export default function Dashboard() {
                         <span className="text-2xl sm:text-3xl font-black tracking-widest text-white tabular-nums">
                           {activeCycle.pin}
                         </span>
-                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#fd8451] text-[10px] uppercase font-bold tracking-wider">
+                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#fd8451] text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[11px]">key</span>
                           Single Use
                         </span>
                       </div>
@@ -342,7 +387,7 @@ export default function Dashboard() {
 
                 {showPinHelp && (
                   <div
-                    className="p-3 rounded-xl text-xs text-[#0b3c42] flex items-start gap-2 animate-fadeIn"
+                    className="p-3 rounded-xl text-xs text-[#0b3c42] flex items-start gap-2 animate-fadeIn relative z-10"
                     style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
                   >
                     <span className="material-symbols-outlined text-[18px] text-[#fd8451] shrink-0 mt-0.5">info</span>
@@ -360,9 +405,10 @@ export default function Dashboard() {
                 <div className="flex items-center gap-2">
                   <h2 className="text-lg sm:text-xl font-extrabold text-[#0b3c42]">Campus Washing Bays</h2>
                   <span
-                    className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#0b3c42] uppercase"
+                    className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#0b3c42] uppercase flex items-center gap-1"
                     style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
                   >
+                    <span className="material-symbols-outlined text-[12px] text-[#0b3c42]">apartment</span>
                     Hostel Bay A
                   </span>
                 </div>
@@ -373,12 +419,12 @@ export default function Dashboard() {
                 className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42]"
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
               >
-                <span className="w-2 h-2 rounded-full bg-emerald-600 animate-pulse" />
+                <span className="material-symbols-outlined text-[15px] text-emerald-700">check_circle</span>
                 <span>1 Idle / 1 Busy</span>
               </div>
             </div>
 
-            {/* Bay Cards Grid */}
+            {/* Bay Cards Grid with Clear Icons (No raw dots/indicators) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {bays.map(bay => {
                 const isAvailable = bay.status === 'available'
@@ -392,7 +438,7 @@ export default function Dashboard() {
                       boxShadow: '6px 6px 16px #b0bec0, -6px -6px 16px #ffffff',
                     }}
                   >
-                    {/* Top machine title and badge */}
+                    {/* Top machine title and badge with Icons */}
                     <div className="flex items-start justify-between gap-2">
                       <div className="flex items-center gap-3">
                         <div
@@ -409,31 +455,42 @@ export default function Dashboard() {
                       </div>
 
                       <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
+                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase ${
                           isAvailable ? 'text-emerald-800' : 'text-[#fd8451]'
                         }`}
                         style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
                       >
-                        <span className={`w-2 h-2 rounded-full ${isAvailable ? 'bg-emerald-600 animate-pulse' : 'bg-[#fd8451]'}`} />
+                        <span className="material-symbols-outlined text-[14px]">
+                          {isAvailable ? 'check_circle' : 'timelapse'}
+                        </span>
                         <span>{bay.statusLabel}</span>
                       </span>
                     </div>
 
-                    {/* Metrics Strip */}
+                    {/* Metrics Strip with Icons */}
                     <div
                       className="grid grid-cols-3 gap-2 p-2.5 rounded-2xl"
                       style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
                     >
                       <div className="flex flex-col items-center text-center">
-                        <span className="text-[9px] font-bold uppercase text-[#8aa8ab]">Cycle</span>
+                        <span className="text-[9px] font-bold uppercase text-[#8aa8ab] flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-[11px]">timer</span>
+                          Cycle
+                        </span>
                         <span className="text-xs font-extrabold text-[#0b3c42]">{bay.cycleDurationMinutes} Mins</span>
                       </div>
                       <div className="flex flex-col items-center text-center border-x border-[#b8c6c9]/50">
-                        <span className="text-[9px] font-bold uppercase text-[#8aa8ab]">Rate</span>
+                        <span className="text-[9px] font-bold uppercase text-[#8aa8ab] flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-[11px]">payments</span>
+                          Rate
+                        </span>
                         <span className="text-xs font-extrabold text-[#fd8451]">₦{bay.rate.toLocaleString()}</span>
                       </div>
                       <div className="flex flex-col items-center text-center">
-                        <span className="text-[9px] font-bold uppercase text-[#8aa8ab]">Temp</span>
+                        <span className="text-[9px] font-bold uppercase text-[#8aa8ab] flex items-center gap-0.5">
+                          <span className="material-symbols-outlined text-[11px]">water_drop</span>
+                          Temp
+                        </span>
                         <span className="text-xs font-extrabold text-[#0b3c42]">{bay.waterTemp}</span>
                       </div>
                     </div>
@@ -449,8 +506,8 @@ export default function Dashboard() {
                           boxShadow: '4px 4px 12px rgba(253,132,81,0.45), -2px -2px 6px rgba(255,255,255,0.5)',
                         }}
                       >
-                        <span className="material-symbols-outlined text-[18px]">bolt</span>
-                        <span>Book {bay.id} (₦{bay.rate.toLocaleString()})</span>
+                        <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
+                        <span>Book {bay.id} (Today or Tomorrow)</span>
                       </button>
                     ) : (
                       <button
@@ -462,8 +519,8 @@ export default function Dashboard() {
                           boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
                         }}
                       >
-                        <span className="material-symbols-outlined text-[18px] text-[#5a7578]">schedule</span>
-                        <span>View Next Available Slots</span>
+                        <span className="material-symbols-outlined text-[18px] text-[#5a7578]">event_upcoming</span>
+                        <span>Book Next Slots (1 Day Ahead)</span>
                       </button>
                     )}
                   </div>
@@ -471,7 +528,7 @@ export default function Dashboard() {
               })}
             </div>
 
-            {/* Zero Blackout Banner */}
+            {/* Zero Blackout Banner with Icons */}
             <section
               className="rounded-3xl p-4 sm:p-5 flex items-center gap-3.5"
               style={{
@@ -483,10 +540,10 @@ export default function Dashboard() {
                 className="w-10 h-10 rounded-2xl flex items-center justify-center text-[#fd8451] shrink-0"
                 style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
               >
-                <span className="material-symbols-outlined text-[22px]">verified</span>
+                <span className="material-symbols-outlined text-[22px]">verified_user</span>
               </div>
               <p className="text-xs text-[#0b3c42] leading-relaxed">
-                <strong>Zero Blackout Guarantee:</strong> Each machine is wired directly to an autonomous 48V campus lithium bank. Campus grid failures do not interrupt your spin cycle.
+                <strong>Zero Blackout Guarantee:</strong> Each machine is backed by an autonomous 48V campus lithium bank. Campus grid failures never interrupt your spin cycle.
               </p>
             </section>
           </>
@@ -503,10 +560,11 @@ export default function Dashboard() {
                 <p className="text-xs text-[#5a7578]">Active unlock codes and past wash records</p>
               </div>
               <span
-                className="px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42]"
+                className="px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] flex items-center gap-1"
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
               >
-                {history.length} Total Bookings
+                <span className="material-symbols-outlined text-[14px] text-[#0b3c42]">history</span>
+                <span>{history.length} Total Bookings</span>
               </span>
             </div>
 
@@ -530,7 +588,7 @@ export default function Dashboard() {
                       }}
                     >
                       <span className="material-symbols-outlined text-[20px]">
-                        {item.status === 'Active' ? 'bolt' : 'receipt_long'}
+                        {item.status === 'Active' ? 'key' : 'receipt_long'}
                       </span>
                     </div>
 
@@ -538,12 +596,15 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <span className="text-xs font-bold text-[#0b3c42]">{item.bayName} ({item.bayId})</span>
                         <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase ${
+                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 ${
                             item.status === 'Active' ? 'text-[#fd8451]' : 'text-emerald-700'
                           }`}
                           style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
                         >
-                          {item.status}
+                          <span className="material-symbols-outlined text-[11px]">
+                            {item.status === 'Active' ? 'sync' : 'check'}
+                          </span>
+                          <span>{item.status}</span>
                         </span>
                       </div>
                       <span className="text-xs text-[#5a7578] mt-0.5">{item.date} • {item.time}</span>
@@ -581,23 +642,23 @@ export default function Dashboard() {
               <p className="text-xs text-[#5a7578]">Quick 4-step walk-through and instant campus issue logging</p>
             </div>
 
-            {/* Quick 4 Steps */}
+            {/* Quick 4 Steps with Icons */}
             <div
               className="rounded-3xl p-5 flex flex-col gap-4"
-              style={{ background: '#dde8ea', boxShadow: '6px 6px 16px #b8c6c9, -6px -6px 16px #ffffff' }}
+              style={{ background: '#dde8ea', boxShadow: '6px 6px 16px #b0bec0, -6px -6px 16px #ffffff' }}
             >
               {[
-                { n: '01', title: 'Book Bay & Receive PIN', text: 'Choose your preferred 30-min window and pay ₦1,500. Your 4-digit PIN is displayed immediately.' },
-                { n: '02', title: 'Wake the Machine', text: 'Press the star (*) button on the physical door keypad to wake up the solar controller.' },
-                { n: '03', title: 'Unlock with PIN', text: 'Enter your 4 digits and press (#). The electronic door lock clicks open immediately.' },
-                { n: '04', title: '10-Min Buffer Turnover', text: 'After the 35-min wash finishes, you have a 10-minute grace window to retrieve your laundry.' },
+                { n: '01', icon: 'key', title: 'Book Bay & Receive PIN', text: 'Choose your preferred 30-min window (today or tomorrow) and pay ₦1,500. Your 4-digit PIN is displayed immediately.' },
+                { n: '02', icon: 'touch_app', title: 'Wake the Machine', text: 'Press the star (*) button on the physical door keypad to wake up the solar controller.' },
+                { n: '03', icon: 'lock_open', title: 'Unlock with PIN', text: 'Enter your 4 digits and press (#). The electronic door lock clicks open immediately.' },
+                { n: '04', icon: 'timer', title: '10-Min Buffer Turnover', text: 'After the 35-min wash finishes, you have a 10-minute grace window to retrieve your laundry.' },
               ].map(st => (
                 <div key={st.n} className="flex items-start gap-3.5">
                   <div
-                    className="w-8 h-8 rounded-xl flex items-center justify-center font-extrabold text-xs text-white shrink-0"
+                    className="w-9 h-9 rounded-xl flex items-center justify-center font-extrabold text-xs text-white shrink-0"
                     style={{ background: '#0b3c42' }}
                   >
-                    {st.n}
+                    <span className="material-symbols-outlined text-[18px]">{st.icon}</span>
                   </div>
                   <div>
                     <h4 className="text-xs font-extrabold text-[#0b3c42]">{st.title}</h4>
