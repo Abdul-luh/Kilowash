@@ -26,12 +26,12 @@ export default function Navbar() {
               className="w-6 h-6 sm:w-7 sm:h-7 rounded-xl flex items-center justify-center"
               style={{ background: '#fd8451', boxShadow: '2px 2px 6px rgba(253,132,81,0.5), -1px -1px 4px rgba(255,255,255,0.4)' }}
             >
-              {/* <span className="material-symbols-outlined text-white text-[15px] sm:text-[16px]">laundry_service</span> */}
+              <span className="material-symbols-outlined text-white text-[15px] sm:text-[16px]">local_laundry_service</span>
             </div>
           </div>
           <div className="flex flex-col leading-none">
             <span style={{ fontWeight: 800, fontSize: '1rem', letterSpacing: '-0.03em', color: '#0b3c42' }}>kilowash</span>
-            {/* <span style={{ fontSize: '8px', fontWeight: 700, letterSpacing: '0.12em', color: '#5a7578', textTransform: 'uppercase' }} className="hidden sm:block">Automated Laundry Network</span> */}
+           
           </div>
         </a>
 
