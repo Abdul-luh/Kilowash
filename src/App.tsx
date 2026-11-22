@@ -1,27 +1,14 @@
-import Navbar from './components/Navbar'
-import Hero from './components/Hero'
-import Ticker from './components/Ticker'
-import HowItWorks from './components/HowItWorks'
-import Pricing from './components/Pricing'
-import FAQ from './components/FAQ'
-import Waitlist from './components/Waitlist'
-import Contact from './components/Contact'
-import Footer from './components/Footer'
+import { Routes, Route } from 'react-router-dom'
+import Landing from './pages/Landing'
+import Dashboard from './pages/Dashboard'
+import Auth from './pages/Auth'
 
 export default function App() {
   return (
-    <>
-      <Navbar />
-      <main>
-        <Hero />
-        <Ticker />
-        <HowItWorks />
-        <Pricing />
-        <FAQ />
-        <Waitlist />
-        <Contact />
-      </main>
-      <Footer />
-    </>
+    <Routes>
+      <Route path="/" element={<Landing />} />
+      <Route path="/dashboard" element={<Dashboard />} />
+      <Route path="/auth" element={<Auth />} />
+    </Routes>
   )
 }

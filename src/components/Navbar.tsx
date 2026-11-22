@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Link } from 'react-router-dom'
 
 export default function Navbar() {
   const [open, setOpen] = useState(false)
@@ -70,8 +71,8 @@ export default function Navbar() {
         {/* Right actions */}
         <div className="flex items-center gap-2 sm:gap-3 shrink-0">
           {/* Sign in — inset */}
-          <a
-            href="#waitlist"
+          <Link
+            to="/auth"
             className="hidden md:inline-flex items-center justify-center px-4 py-2 rounded-full transition-all"
             style={{
               background: '#dde8ea',
@@ -81,7 +82,21 @@ export default function Navbar() {
             }}
           >
             Sign In
-          </a>
+          </Link>
+
+          {/* Dashboard live preview button */}
+          <Link
+            to="/dashboard"
+            className="hidden sm:inline-flex items-center justify-center px-4 py-2 rounded-full transition-all"
+            style={{
+              background: '#dde8ea',
+              boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff',
+              fontSize: '12px', fontWeight: 700, letterSpacing: '0.01em', color: '#0b3c42',
+              textDecoration: 'none',
+            }}
+          >
+            Bays
+          </Link>
 
           {/* CTA — raised tang */}
           <a
