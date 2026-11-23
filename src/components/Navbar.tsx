@@ -87,15 +87,16 @@ export default function Navbar() {
           {/* Dashboard live preview button */}
           <Link
             to="/dashboard"
-            className="hidden sm:inline-flex items-center justify-center px-4 py-2 rounded-full transition-all"
+            className="inline-flex items-center justify-center px-3 sm:px-4 py-2 rounded-full transition-all gap-1"
             style={{
               background: '#dde8ea',
               boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff',
-              fontSize: '12px', fontWeight: 700, letterSpacing: '0.01em', color: '#0b3c42',
+              fontSize: '11px', fontWeight: 700, letterSpacing: '0.01em', color: '#0b3c42',
               textDecoration: 'none',
             }}
           >
-            Bays
+            <span className="material-symbols-outlined text-[15px] text-[#fd8451]">tune</span>
+            <span>Bays</span>
           </Link>
 
           {/* CTA — raised tang */}
@@ -133,20 +134,52 @@ export default function Navbar() {
       {/* Mobile menu — inset panel */}
       {open && (
         <div
-          className="xl:hidden mx-3 sm:mx-6 mb-3 p-4 flex flex-col gap-1 rounded-2xl"
+          className="xl:hidden mx-3 sm:mx-6 mb-3 p-4 flex flex-col gap-1.5 rounded-2xl animate-fadeIn"
           style={{ background: '#dde8ea', boxShadow: 'inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff' }}
         >
+          {/* Prominent Mobile Dashboard Button */}
+          <Link
+            to="/dashboard"
+            onClick={() => setOpen(false)}
+            className="flex items-center justify-between p-3 rounded-xl transition-all"
+            style={{
+              background: '#0b3c42',
+              color: '#ffffff',
+              boxShadow: '3px 3px 8px rgba(11,60,66,0.3)',
+              textDecoration: 'none',
+            }}
+          >
+            <div className="flex items-center gap-2">
+              <span className="material-symbols-outlined text-[18px] text-[#fd8451]">tune</span>
+              <span className="text-xs font-extrabold">Open Campus Bays Dashboard</span>
+            </div>
+            <span className="material-symbols-outlined text-[16px]">arrow_forward</span>
+          </Link>
+
+          <Link
+            to="/auth"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2 px-4 py-2.5 rounded-xl transition-all text-xs font-bold text-[#0b3c42]"
+            style={{ textDecoration: 'none' }}
+          >
+            <span className="material-symbols-outlined text-[16px] text-[#5a7578]">login</span>
+            <span>Student Sign In / Account</span>
+          </Link>
+
+          <div className="h-px bg-[#b8c6c9]/40 my-1" />
+
           {links.map(l => (
             <a
               key={l.href}
               href={l.href}
               onClick={() => setOpen(false)}
-              className="px-4 py-2.5 rounded-xl transition-all"
+              className="px-4 py-2 rounded-xl transition-all"
               style={{ fontSize: '13px', fontWeight: 600, color: '#5a7578', textDecoration: 'none' }}
             >
               {l.label}
             </a>
           ))}
+
           <a
             href="#waitlist"
             onClick={() => setOpen(false)}

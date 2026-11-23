@@ -3,6 +3,7 @@ import natives from '../assets/natives.png'
 import machine from '../assets/the machine.png'
 import HeroImg from '../assets/Hero.png'
 import fila from '../assets/fila.png'
+import { Link } from 'react-router-dom'
 import foldedTs from '../assets/folded Ts.png'
 
 const bays = [
@@ -106,8 +107,8 @@ export default function Hero() {
 
             {/* CTAs */}
             <div className="flex flex-wrap items-center gap-4">
-              <a
-                href="#waitlist"
+              <Link
+                to="/dashboard"
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full transition-all"
                 style={{
                   background: '#fd8451',
@@ -115,9 +116,9 @@ export default function Hero() {
                   fontSize: '13px', fontWeight: 700, color: 'white', textDecoration: 'none',
                 }}
               >
-                {/* <span className="material-symbols-outlined text-[18px]">calendar_clock</span> */}
+                <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
                 Book Your 30-Min Slot
-              </a>
+              </Link>
               <a
                 href="#how"
                 className="inline-flex items-center gap-2 px-7 py-3.5 rounded-full transition-all"
@@ -315,8 +316,8 @@ export default function Hero() {
                   </div>
 
                   {bay.cta && (
-                    <a
-                      href="#waitlist"
+                    <Link
+                      to="/dashboard"
                       className="w-full text-center py-2 rounded-full transition-all"
                       style={{
                         background: '#dde8ea',
@@ -325,7 +326,7 @@ export default function Hero() {
                       }}
                     >
                       {bay.cta}
-                    </a>
+                    </Link>
                   )}
                 </div>
               </div>
