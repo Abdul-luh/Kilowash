@@ -13,15 +13,19 @@ import {
 } from '../data/mockDashboard'
 import SlotPickerModal from '../components/dashboard/SlotPickerModal'
 import GuideModal from '../components/dashboard/GuideModal'
+import ComplaintModal from '../components/dashboard/ComplaintModal'
 
 export default function Dashboard() {
   const [bays] = useState<Bay[]>(INITIAL_BAYS)
   const [selectedBay, setSelectedBay] = useState<Bay | null>(null)
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false)
+  const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false)
+  const [complaintBayId, setComplaintBayId] = useState<string>('BAY-01')
+  const [complaintBookingId, setComplaintBookingId] = useState<string>('')
 
-  // Current active navigation tab: 'bays' | 'pins' | 'guide'
-  const [activeTab, setActiveTab] = useState<'bays' | 'pins' | 'guide'>('bays')
+  // Current active navigation tab: 'bays' | 'history' | 'guide'
+  const [activeTab, setActiveTab] = useState<'bays' | 'history' | 'guide'>('bays')
 
   // Active running wash simulation
   const [activeCycle, setActiveCycle] = useState<ActiveCycle | null>({
@@ -187,11 +191,26 @@ export default function Dashboard() {
           {/* Quick Guide Trigger */}
           <button
             onClick={() => setIsGuideModalOpen(true)}
-            className="hidden md:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-[#0b3c42] hover:text-[#fd8451] transition-colors"
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-[#0b3c42] hover:text-[#fd8451] transition-colors"
             style={{ background: '#dde8ea', boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff' }}
           >
             <span className="material-symbols-outlined text-[15px]">help</span>
             <span>How to Unlock</span>
+          </button>
+
+          {/* Quick Complaint / Comment Trigger */}
+          <button
+            onClick={() => {
+              setComplaintBookingId('')
+              setComplaintBayId('BAY-01')
+              setIsComplaintModalOpen(true)
+            }}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold text-[#0b3c42] hover:text-[#fd8451] transition-colors"
+            style={{ background: '#dde8ea', boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff' }}
+            title="Lodge complaint or feedback"
+          >
+            <span className="material-symbols-outlined text-[15px] text-[#fd8451]">campaign</span>
+            <span>Feedback / Issue</span>
           </button>
 
           {/* User Avatar */}
@@ -540,29 +559,74 @@ export default function Dashboard() {
         )}
 
         {/* ============================================================== */}
-        {/* VIEW 2: MY PINS & BOOKING HISTORY */}
+        {/* VIEW 2: WASH HISTORY & COMPLAINTS */}
         {/* ============================================================== */}
-        {activeTab === 'pins' && (
+        {activeTab === 'history' && (
           <div className="flex flex-col gap-4 animate-fadeIn">
+            {/* View Header */}
             <div className="flex items-center justify-between px-1">
               <div>
-                <h2 className="text-xl font-extrabold text-[#0b3c42]">My Keypad PINs & History</h2>
-                <p className="text-xs text-[#5a7578]">Active unlock codes and past wash records</p>
+                <h2 className="text-xl font-extrabold text-[#0b3c42]">Wash History</h2>
+                <p className="text-xs text-[#5a7578]">Past wash sessions, PIN records & booking receipts</p>
               </div>
               <span
-                className="px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] flex items-center gap-1"
+                className="px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] flex items-center gap-1.5"
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
               >
-                <span className="material-symbols-outlined text-[14px] text-[#0b3c42]">history</span>
-                <span>{history.length} Total Bookings</span>
+                <span className="material-symbols-outlined text-[15px] text-[#fd8451]">history</span>
+                <span>{history.length} Sessions</span>
               </span>
             </div>
 
+            {/* Prominent Complaint & Comment Card */}
+            <div
+              className="rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4"
+              style={{
+                background: '#dde8ea',
+                boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
+              }}
+            >
+              <div className="flex items-center gap-3.5">
+                <div
+                  className="w-11 h-11 rounded-2xl flex items-center justify-center text-[#fd8451] shrink-0"
+                  style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+                >
+                  <span className="material-symbols-outlined text-[22px]">support_agent</span>
+                </div>
+                <div>
+                  <h3 className="text-xs sm:text-sm font-extrabold text-[#0b3c42]">
+                    Have an issue or want to leave a comment?
+                  </h3>
+                  <p className="text-[11px] text-[#5a7578] mt-0.5 leading-snug">
+                    Report previous user clothes trapped inside, machine errors, or share your laundry suggestions.
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setComplaintBookingId('')
+                  setComplaintBayId('BAY-01')
+                  setIsComplaintModalOpen(true)
+                }}
+                className="w-full sm:w-auto px-4 py-2.5 rounded-full text-xs font-bold text-white flex items-center justify-center gap-1.5 shrink-0 transition-all active:scale-95"
+                style={{
+                  background: '#0b3c42',
+                  boxShadow: '3px 3px 8px rgba(11,60,66,0.35), -2px -2px 6px #ffffff',
+                }}
+              >
+                <span className="material-symbols-outlined text-[16px] text-[#fd8451]">campaign</span>
+                <span>Lodge Complaint or Comment</span>
+              </button>
+            </div>
+
+            {/* Wash History Cards */}
             <div className="flex flex-col gap-3">
               {history.map(item => (
                 <div
                   key={item.id}
-                  className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
+                  className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5"
                   style={{
                     background: '#dde8ea',
                     boxShadow: '5px 5px 14px #b8c6c9, -5px -5px 14px #ffffff',
@@ -578,7 +642,7 @@ export default function Dashboard() {
                       }}
                     >
                       <span className="material-symbols-outlined text-[20px]">
-                        {item.status === 'Active' ? 'key' : 'receipt_long'}
+                        {item.status === 'Active' ? 'cyclone' : 'receipt_long'}
                       </span>
                     </div>
 
@@ -598,23 +662,41 @@ export default function Dashboard() {
                         </span>
                       </div>
                       <span className="text-xs text-[#5a7578] mt-0.5">{item.date} • {item.time}</span>
+                      <span className="text-[10px] text-[#8aa8ab] font-bold mt-0.5">Ref: {item.id} • ₦{item.amount.toLocaleString()}</span>
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-4 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
-                    <div className="flex flex-col text-left sm:text-right">
+                  <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
+                    <div className="flex flex-col text-left sm:text-right mr-1">
                       <span className="text-[10px] text-[#8aa8ab] uppercase font-bold">Keypad PIN</span>
                       <span className="text-lg font-black tracking-widest text-[#0b3c42]">{item.pin}</span>
                     </div>
 
-                    <button
-                      onClick={() => handleCopyPin(item.pin)}
-                      className="px-3.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
-                      style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
-                    >
-                      <span className="material-symbols-outlined text-[15px]">content_copy</span>
-                      <span>Copy</span>
-                    </button>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleCopyPin(item.pin)}
+                        className="px-3 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
+                        style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+                        title="Copy PIN"
+                      >
+                        <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                        <span>Copy</span>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setComplaintBookingId(item.id)
+                          setComplaintBayId(item.bayId)
+                          setIsComplaintModalOpen(true)
+                        }}
+                        className="px-2.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-1"
+                        style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                        title="Report issue or comment on this wash"
+                      >
+                        <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
+                        <span className="hidden sm:inline">Issue / Feedback</span>
+                      </button>
+                    </div>
                   </div>
                 </div>
               ))}
@@ -658,26 +740,42 @@ export default function Dashboard() {
               ))}
             </div>
 
-            {/* Log an Issue Card */}
+            {/* Log an Issue & Comment Card */}
             <div
               className="rounded-3xl p-5 flex flex-col gap-3.5"
               style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff' }}
             >
               <h3 className="text-sm font-extrabold text-[#0b3c42] flex items-center gap-2">
                 <span className="material-symbols-outlined text-[#fd8451] text-[18px]">report_problem</span>
-                Report Machine or Blocked Laundry
+                Report Machine, Blocked Laundry, or Comment
               </h3>
-              <p className="text-xs text-[#5a7578]">
-                If a previous user left their laundry inside or if you encounter any hardware issue, alert campus operations immediately:
+              <p className="text-xs text-[#5a7578] leading-relaxed">
+                If a previous user left their laundry inside, if a machine stopped mid-cycle, or if you want to suggest improvements, alert campus operations immediately:
               </p>
-              <a
-                href="mailto:founders@kilowash.ng?subject=Hostel%20Bay%20Support%20Issue"
-                className="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-bold text-white transition-all self-start"
-                style={{ background: '#0b3c42', boxShadow: '4px 4px 10px rgba(11,60,66,0.35)' }}
-              >
-                <span className="material-symbols-outlined text-[16px]">mail</span>
-                <span>Email Campus Operations (founders@kilowash.ng)</span>
-              </a>
+              <div className="flex flex-wrap items-center gap-3 pt-1">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setComplaintBookingId('')
+                    setComplaintBayId('BAY-01')
+                    setIsComplaintModalOpen(true)
+                  }}
+                  className="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-bold text-white transition-all active:scale-95"
+                  style={{ background: '#fd8451', boxShadow: '4px 4px 10px rgba(253,132,81,0.45)' }}
+                >
+                  <span className="material-symbols-outlined text-[16px]">campaign</span>
+                  <span>Lodge Complaint / Give Comment</span>
+                </button>
+
+                <a
+                  href="mailto:founders@kilowash.ng?subject=Hostel%20Bay%20Support%20Issue"
+                  className="inline-flex items-center justify-center gap-2 py-3 px-5 rounded-full text-xs font-bold text-[#0b3c42] transition-all"
+                  style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+                >
+                  <span className="material-symbols-outlined text-[16px]">mail</span>
+                  <span>Email Founders</span>
+                </a>
+              </div>
             </div>
           </div>
         )}
@@ -714,18 +812,18 @@ export default function Dashboard() {
           </button>
 
           <button
-            onClick={() => setActiveTab('pins')}
+            onClick={() => setActiveTab('history')}
             className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-2 text-xs font-extrabold transition-all ${
-              activeTab === 'pins' ? 'text-white' : 'text-[#5a7578] hover:text-[#0b3c42]'
+              activeTab === 'history' ? 'text-white' : 'text-[#5a7578] hover:text-[#0b3c42]'
             }`}
             style={
-              activeTab === 'pins'
+              activeTab === 'history'
                 ? { background: '#0b3c42', boxShadow: '3px 3px 8px rgba(11,60,66,0.4)' }
                 : { background: 'transparent' }
             }
           >
-            <span className="material-symbols-outlined text-[18px]">pin</span>
-            <span>My PINs</span>
+            <span className="material-symbols-outlined text-[18px]">history</span>
+            <span>Wash History</span>
           </button>
 
           <button
@@ -758,6 +856,13 @@ export default function Dashboard() {
       <GuideModal
         isOpen={isGuideModalOpen}
         onClose={() => setIsGuideModalOpen(false)}
+      />
+
+      <ComplaintModal
+        isOpen={isComplaintModalOpen}
+        onClose={() => setIsComplaintModalOpen(false)}
+        initialBayId={complaintBayId}
+        initialBookingId={complaintBookingId}
       />
     </div>
   )
