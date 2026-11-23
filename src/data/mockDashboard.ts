@@ -92,6 +92,9 @@ export const INITIAL_BAYS: Bay[] = [
 // Generate 30-minute interval slots from 07:00 AM to 09:30 PM
 function generate30MinSlots(day: 'today' | 'tomorrow', dayLabel: string): BookingSlot[] {
   const slots: BookingSlot[] = []
+  const now = new Date()
+  const currentHourDecimal = now.getHours() + now.getMinutes() / 60
+
   // From 7:00 AM (7.0) to 9:30 PM (21.5)
   for (let h = 7; h <= 21; h++) {
     for (const m of [0, 30]) {
@@ -113,10 +116,10 @@ function generate30MinSlots(day: 'today' | 'tomorrow', dayLabel: string): Bookin
       const endStr = formatTime(endH, endM)
       const hourDecimal = h + m / 60
 
-      // Simulate a few past slots for today
-      const isPast = day === 'today' && hourDecimal < 11.5
-      // Simulate a couple occupied slots
-      const isAvailable = !isPast && !(day === 'today' && (hourDecimal === 12.0 || hourDecimal === 14.5))
+      // A slot is past if it's today and the time has already passed
+      const isPast = day === 'today' && hourDecimal <= currentHourDecimal
+      // Simulate a couple occupied slots among future slots
+      const isAvailable = !isPast && !(day === 'today' && (hourDecimal === 19.0 || hourDecimal === 20.0))
 
       slots.push({
         id: `${day}-${h}-${m}`,

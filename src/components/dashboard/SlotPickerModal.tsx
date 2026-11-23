@@ -15,22 +15,28 @@ export default function SlotPickerModal({
   onClose,
   onConfirmBooking,
 }: SlotPickerModalProps) {
-  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>('today')
+  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>(() => {
+    const hasTodayUpcoming = MULTI_DAY_SLOTS.some(s => s.day === 'today' && !s.isPast)
+    return hasTodayUpcoming ? 'today' : 'tomorrow'
+  })
 
+  // ONLY upcoming slots are placed on the knob - passed times are removed completely
   const daySlots = useMemo(() => {
-    return MULTI_DAY_SLOTS.filter(s => s.day === selectedDay)
+    const upcoming = MULTI_DAY_SLOTS.filter(s => s.day === selectedDay && !s.isPast)
+    if (upcoming.length === 0) {
+      return MULTI_DAY_SLOTS.filter(s => s.day === 'tomorrow' && !s.isPast)
+    }
+    return upcoming
   }, [selectedDay])
 
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(() => {
-    const idx = MULTI_DAY_SLOTS.filter(s => s.day === 'today').findIndex(s => s.isAvailable && !s.isPast)
-    return idx >= 0 ? idx : 0
-  })
+  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(0)
 
   // Manual Time Input Mode
   const [isManualInput, setIsManualInput] = useState(false)
   const [manualTime, setManualTime] = useState('13:00')
 
-  const [addDetergent, setAddDetergent] = useState(false)
+  // Detergent state (kept in component logic for backward compatibility, UI commented out)
+  const [addDetergent] = useState(false)
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Rotary mouse drag interaction refs
@@ -46,9 +52,7 @@ export default function SlotPickerModal({
 
   const handleSelectDay = useCallback((day: 'today' | 'tomorrow') => {
     setSelectedDay(day)
-    const newSlots = MULTI_DAY_SLOTS.filter(s => s.day === day)
-    const firstOpen = newSlots.findIndex(s => s.isAvailable && !s.isPast)
-    setSelectedSlotIndex(firstOpen >= 0 ? firstOpen : 0)
+    setSelectedSlotIndex(0)
   }, [])
 
   // Mouse & Touch Pointer Drag Handler (Clean geometric polar angle)
@@ -155,11 +159,6 @@ export default function SlotPickerModal({
     phaseColor = '#a2ced5'
     skyBackground = 'linear-gradient(135deg, rgba(11,60,66,0.3) 0%, rgba(221,232,234,0.9) 100%)'
   }
-
-  // Smooth arc for Sun & Moon
-  const arcRad = Math.PI - daylightProgress * Math.PI
-  const celestialX = 50 + 40 * Math.cos(arcRad)
-  const celestialY = 70 - 45 * Math.sin(arcRad)
 
   const basePrice = bay.rate
   const finalPrice = addDetergent ? basePrice + 200 : basePrice
@@ -289,77 +288,69 @@ export default function SlotPickerModal({
         </div>
 
         {/* ============================================================== */}
-        {/* THE ROTARY WASHER DIAL & DAYLIGHT CELESTIAL SKY DOME */}
+        {/* THE ROTARY WASHER DIAL & DAYLIGHT HORIZON TRACKER */}
         {/* ============================================================== */}
         <div
-          className="rounded-3xl p-4 sm:p-5 flex flex-col items-center gap-3 relative overflow-hidden transition-all duration-700"
+          className="rounded-3xl p-4 sm:p-5 flex flex-col items-center gap-2 relative overflow-hidden transition-all duration-700"
           style={{
             background: skyBackground,
             boxShadow: 'inset 4px 4px 12px #b0bec0, inset -4px -4px 12px #ffffff',
           }}
         >
-          {/* Daylight Horizon Arch & Sun/Moon Orb */}
-          <div className="w-full h-18 relative flex items-center justify-center">
-            {/* Dashed trajectory arc of the sun / moon */}
-            <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 90">
-              <path
-                d="M 20 80 Q 100 10 180 80"
-                fill="none"
-                stroke="rgba(11,60,66,0.18)"
-                strokeWidth="2"
-                strokeDasharray="4 4"
+          {/* Streamlined Daylight Sky Horizon & Moving Celestial Body */}
+          <div className="w-full flex flex-col items-center gap-1.5 pt-0.5 pb-1">
+            <div className="w-full max-w-xs relative h-7 flex items-center justify-between px-2">
+              {/* Subtle Horizon Guide Track */}
+              <div
+                className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none"
+                style={{
+                  background: 'rgba(11,60,66,0.12)',
+                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
+                }}
               />
-            </svg>
 
-            {/* Dynamic Moving Celestial Body (Sun or Moon) */}
-            <div
-              className="absolute w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ease-out z-10"
-              style={{
-                left: `${celestialX}%`,
-                top: `${celestialY}%`,
-                transform: 'translate(-50%, -50%)',
-                background: phaseColor,
-                color: '#ffffff',
-                boxShadow: `0 0 16px ${phaseColor}, inset 1px 1px 3px rgba(255,255,255,0.8)`,
-              }}
-            >
-              <span className="material-symbols-outlined text-[16px]">{phaseIcon}</span>
+              {/* Dynamic Celestial Body (Sun/Moon) smoothly gliding across the horizon */}
+              <div
+                className="absolute w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ease-out z-10 -translate-y-1/2 top-1/2"
+                style={{
+                  left: `calc(26px + ${daylightProgress * 100}% * 0.76)`,
+                  background: phaseColor,
+                  color: '#ffffff',
+                  boxShadow: `0 0 12px ${phaseColor}, inset 1px 1px 2px rgba(255,255,255,0.8)`,
+                }}
+                title={dayPhase}
+              >
+                <span className="material-symbols-outlined text-[15px]">{phaseIcon}</span>
+              </div>
+
+              {/* Horizon Anchor Labels */}
+              <span className="relative z-0 text-[10px] font-bold text-[#8aa8ab] uppercase flex items-center gap-0.5">
+                <span className="material-symbols-outlined text-[11px]">wb_twilight</span> 7 AM
+              </span>
+
+              <span className="relative z-0 text-[9px] font-extrabold text-[#5a7578] uppercase tracking-wider flex items-center gap-0.5">
+                <span className="material-symbols-outlined text-[12px] text-[#f59e0b]">sunny</span> 12–1 PM
+              </span>
+
+              <span className="relative z-0 text-[10px] font-bold text-[#8aa8ab] uppercase flex items-center gap-0.5">
+                9:30 PM <span className="material-symbols-outlined text-[11px]">bedtime</span>
+              </span>
             </div>
 
-            {/* Horizon indicator tags */}
-            <span className="absolute bottom-1 left-2 text-[10px] font-bold text-[#8aa8ab] uppercase flex items-center gap-0.5">
-              <span className="material-symbols-outlined text-[12px]">wb_twilight</span> 7 AM
-            </span>
-            <span className="absolute top-1 text-[10px] font-extrabold text-[#0b3c42] uppercase tracking-wider flex items-center gap-1">
-              <span className="material-symbols-outlined text-[14px] text-[#f59e0b]">sunny</span> 12–1 PM Peak
-            </span>
-            <span className="absolute bottom-1 right-2 text-[10px] font-bold text-[#8aa8ab] uppercase flex items-center gap-0.5">
-              9:30 PM <span className="material-symbols-outlined text-[12px]">bedtime</span>
-            </span>
-          </div>
-
-          {/* Current Solar / Daylight Status Bar & Turn Dial Hint */}
-          <div className="flex flex-col items-center gap-1.5 w-full">
+            {/* Clean Status Pill with Day Phase */}
             <div
-              className="px-4 py-1 rounded-full flex items-center gap-2 text-xs font-bold text-[#0b3c42]"
+              className="px-3.5 py-1 rounded-full flex items-center gap-2 text-xs font-bold text-[#0b3c42]"
               style={{
                 background: '#dde8ea',
-                boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff',
               }}
             >
-              <span className="material-symbols-outlined text-[16px]" style={{ color: phaseColor }}>
+              <span className="material-symbols-outlined text-[15px]" style={{ color: phaseColor }}>
                 {phaseIcon}
               </span>
               <span>{dayPhase}</span>
               <span className="text-[#8aa8ab]">•</span>
-              <span className="text-[#fd8451]">{currentSlot.startTime}</span>
-            </div>
-
-            {/* Explicit animated prompt instructing user to turn knob */}
-            <div className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#fd8451] uppercase tracking-wider animate-pulse">
-              <span className="material-symbols-outlined text-[15px]">rotate_right</span>
-              <span>Turn dial to set your 30-min time</span>
-              <span className="material-symbols-outlined text-[15px]">rotate_left</span>
+              <span className="text-[#fd8451] font-extrabold">{currentSlot.startTime}</span>
             </div>
           </div>
 
@@ -404,7 +395,7 @@ export default function SlotPickerModal({
                 strokeLinecap="round"
               />
 
-              {/* Slot Pips positioned along the 270-deg arc */}
+              {/* Slot Pips positioned along the 270-deg arc (Only upcoming slots!) */}
               {daySlots.map((slot, i) => {
                 const angleDeg = -135 + i * stepAngle
                 const rad = ((angleDeg - 90) * Math.PI) / 180
@@ -414,8 +405,6 @@ export default function SlotPickerModal({
 
                 const pipColor = isSelected
                   ? '#fd8451'
-                  : slot.isPast
-                  ? '#c0c8c9'
                   : !slot.isAvailable
                   ? '#0b3c42'
                   : '#ffffff'
@@ -502,14 +491,12 @@ export default function SlotPickerModal({
               <span className="text-[10px] text-[#a2ced5] leading-none mt-0.5">30-min wash</span>
               <span
                 className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full mt-1 ${
-                  currentSlot.isPast
-                    ? 'bg-white/10 text-[#8aa8ab]'
-                    : !currentSlot.isAvailable
+                  !currentSlot.isAvailable
                     ? 'bg-red-900/60 text-red-200'
                     : 'bg-emerald-900/60 text-emerald-300'
                 }`}
               >
-                {currentSlot.isPast ? 'Passed' : !currentSlot.isAvailable ? 'Booked' : 'Available'}
+                {!currentSlot.isAvailable ? 'Booked' : 'Available'}
               </span>
 
               {/* Hand turn micro-icon indicator inside center well */}
@@ -593,7 +580,8 @@ export default function SlotPickerModal({
           </div>
         </div>
 
-        {/* Detergent Addon Checkbox */}
+        {/* Detergent Addon Checkbox - Commented out as requested */}
+        {/*
         <label
           className="rounded-2xl p-3 flex items-center justify-between cursor-pointer transition-all select-none"
           style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff' }}
@@ -615,6 +603,7 @@ export default function SlotPickerModal({
           </div>
           <span className="text-xs font-extrabold text-[#fd8451]">+₦200</span>
         </label>
+        */}
 
         {/* Pricing Summary & Checkout Button */}
         <div className="flex flex-col gap-2.5 pt-1 border-t border-[#b8c6c9]/40">

@@ -666,22 +666,51 @@ export default function Dashboard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
-                    <div className="flex flex-col text-left sm:text-right mr-1">
-                      <span className="text-[10px] text-[#8aa8ab] uppercase font-bold">Keypad PIN</span>
-                      <span className="text-lg font-black tracking-widest text-[#0b3c42]">{item.pin}</span>
-                    </div>
+                  {item.status === 'Active' ? (
+                    <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
+                      <div className="flex flex-col text-left sm:text-right mr-1">
+                        <span className="text-[10px] text-[#8aa8ab] uppercase font-bold">Keypad PIN</span>
+                        <span className="text-lg font-black tracking-widest text-[#0b3c42]">{item.pin}</span>
+                      </div>
 
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleCopyPin(item.pin)}
-                        className="px-3 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
-                        style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
-                        title="Copy PIN"
-                      >
-                        <span className="material-symbols-outlined text-[15px]">content_copy</span>
-                        <span>Copy</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => handleCopyPin(item.pin)}
+                          className="px-3 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
+                          style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+                          title="Copy PIN"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                          <span>Copy</span>
+                        </button>
+
+                        <button
+                          onClick={() => {
+                            setComplaintBookingId(item.id)
+                            setComplaintBayId(item.bayId)
+                            setIsComplaintModalOpen(true)
+                          }}
+                          className="px-2.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-1"
+                          style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                          title="Report issue or comment on this wash"
+                        >
+                          <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
+                          <span className="hidden sm:inline">Issue / Feedback</span>
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    /* Past or completed wash: PIN is used/expired and no longer needed */
+                    <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
+                      <div className="flex items-center gap-1.5">
+                        <span
+                          className="px-2.5 py-1 rounded-full text-[10px] font-bold text-[#8aa8ab] uppercase tracking-wider flex items-center gap-1"
+                          style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
+                        >
+                          <span className="material-symbols-outlined text-[13px] text-emerald-700">lock</span>
+                          <span>PIN Expired / Used</span>
+                        </span>
+                      </div>
 
                       <button
                         onClick={() => {
@@ -694,10 +723,10 @@ export default function Dashboard() {
                         title="Report issue or comment on this wash"
                       >
                         <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
-                        <span className="hidden sm:inline">Issue / Feedback</span>
+                        <span>Issue / Comment</span>
                       </button>
                     </div>
-                  </div>
+                  )}
                 </div>
               ))}
             </div>
