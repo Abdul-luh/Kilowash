@@ -34,7 +34,7 @@ export default function SlotPickerModal({
   const [isProcessing, setIsProcessing] = useState(false)
 
   // Rotary mouse drag interaction refs
-  const knobRef = useRef<HTMLDivElement>(null)
+  const dialRef = useRef<SVGSVGElement>(null)
   const isDragging = useRef(false)
 
   const totalSlots = daySlots.length
@@ -44,9 +44,6 @@ export default function SlotPickerModal({
   const safeIndex = Math.min(Math.max(0, selectedSlotIndex), totalSlots - 1)
   const currentSlot = daySlots[safeIndex] || daySlots[0]
 
-  // Angle of the rotating outer ring
-  const currentRotation = -135 + safeIndex * stepAngle
-
   const handleSelectDay = useCallback((day: 'today' | 'tomorrow') => {
     setSelectedDay(day)
     const newSlots = MULTI_DAY_SLOTS.filter(s => s.day === day)
@@ -54,40 +51,43 @@ export default function SlotPickerModal({
     setSelectedSlotIndex(firstOpen >= 0 ? firstOpen : 0)
   }, [])
 
-  // Mouse / Touch Dragging Handler on the Outer Rotary Ring
+  // Mouse & Touch Pointer Drag Handler (Clean geometric polar angle)
+  const updateAngleFromPointer = (clientX: number, clientY: number) => {
+    if (!dialRef.current) return
+    const rect = dialRef.current.getBoundingClientRect()
+    const cx = rect.left + rect.width / 2
+    const cy = rect.top + rect.height / 2
+
+    const dx = clientX - cx
+    const dy = clientY - cy
+
+    // Angle in degrees: 0 at top (12 o'clock), positive clockwise, negative counter-clockwise
+    let deg = Math.atan2(dx, -dy) * (180 / Math.PI)
+
+    // Arc range: -135deg (bottom-left) to +135deg (bottom-right)
+    if (deg < -135) deg = -135
+    if (deg > 135) deg = 135
+
+    const fraction = (deg + 135) / 270
+    const slotIdx = Math.round(fraction * (totalSlots - 1))
+    setSelectedSlotIndex(Math.min(Math.max(0, slotIdx), totalSlots - 1))
+  }
+
   const handlePointerDown = (e: React.PointerEvent) => {
     isDragging.current = true
-    ;(e.target as HTMLElement).setPointerCapture(e.pointerId)
-    handlePointerMove(e)
+    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
+    updateAngleFromPointer(e.clientX, e.clientY)
   }
 
   const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging.current || !knobRef.current) return
-
-    const rect = knobRef.current.getBoundingClientRect()
-    const centerX = rect.left + rect.width / 2
-    const centerY = rect.top + rect.height / 2
-
-    const dx = e.clientX - centerX
-    const dy = e.clientY - centerY
-
-    // Angle in degrees from 12 o'clock (-180 to 180)
-    let angleDeg = Math.atan2(dx, -dy) * (180 / Math.PI)
-
-    // Clamp angle to the 270-degree range (-135deg to +135deg)
-    if (angleDeg < -135) angleDeg = -135
-    if (angleDeg > 135) angleDeg = 135
-
-    // Map angle to slot index
-    const normalized = (angleDeg + 135) / 270
-    const slotIdx = Math.round(normalized * (totalSlots - 1))
-    setSelectedSlotIndex(Math.min(Math.max(0, slotIdx), totalSlots - 1))
+    if (!isDragging.current) return
+    updateAngleFromPointer(e.clientX, e.clientY)
   }
 
   const handlePointerUp = (e: React.PointerEvent) => {
     isDragging.current = false
     try {
-      ;(e.target as HTMLElement).releasePointerCapture(e.pointerId)
+      ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
     } catch {
       // ignore
     }
@@ -120,7 +120,6 @@ export default function SlotPickerModal({
   }
 
   // Daylight state calculations
-  // hour24 ranges from 7.0 (morning) to 21.5 (night)
   const hour = currentSlot.hour24
   let dayPhase = 'Morning Sunrise'
   let phaseIcon = 'wb_twilight'
@@ -173,6 +172,17 @@ export default function SlotPickerModal({
       onConfirmBooking(currentSlot, addDetergent)
     }, 1200)
   }
+
+  // SVG Geometry constants for pure distortion-free rendering
+  const cx = 130
+  const cy = 130
+  const r = 98
+
+  // Active slot coordinates on SVG arc
+  const activeAngleDeg = -135 + safeIndex * stepAngle
+  const activeRad = ((activeAngleDeg - 90) * Math.PI) / 180
+  const activeKnobX = cx + r * Math.cos(activeRad)
+  const activeKnobY = cy + r * Math.sin(activeRad)
 
   if (!isOpen) return null
 
@@ -289,7 +299,7 @@ export default function SlotPickerModal({
           }}
         >
           {/* Daylight Horizon Arch & Sun/Moon Orb */}
-          <div className="w-full h-20 relative flex items-center justify-center">
+          <div className="w-full h-18 relative flex items-center justify-center">
             {/* Dashed trajectory arc of the sun / moon */}
             <svg className="absolute inset-0 w-full h-full pointer-events-none" viewBox="0 0 200 90">
               <path
@@ -303,7 +313,7 @@ export default function SlotPickerModal({
 
             {/* Dynamic Moving Celestial Body (Sun or Moon) */}
             <div
-              className="absolute w-9 h-9 rounded-full flex items-center justify-center transition-all duration-500 ease-out z-10"
+              className="absolute w-8 h-8 rounded-full flex items-center justify-center transition-all duration-500 ease-out z-10"
               style={{
                 left: `${celestialX}%`,
                 top: `${celestialY}%`,
@@ -313,7 +323,7 @@ export default function SlotPickerModal({
                 boxShadow: `0 0 16px ${phaseColor}, inset 1px 1px 3px rgba(255,255,255,0.8)`,
               }}
             >
-              <span className="material-symbols-outlined text-[18px]">{phaseIcon}</span>
+              <span className="material-symbols-outlined text-[16px]">{phaseIcon}</span>
             </div>
 
             {/* Horizon indicator tags */}
@@ -345,67 +355,107 @@ export default function SlotPickerModal({
           </div>
 
           {/* ============================================================== */}
-          {/* THE ROTARY KNOB: FIXED CENTER INDICATOR + ROTATING OUTER RING */}
+          {/* SVG ROTARY DIAL: MATHEMATICALLY PERFECT GEOMETRY (ZERO DISTORTION) */}
           {/* ============================================================== */}
-          <div
-            ref={knobRef}
-            onPointerDown={handlePointerDown}
-            onPointerMove={handlePointerMove}
-            onPointerUp={handlePointerUp}
-            className="relative flex items-center justify-center my-2 select-none touch-none cursor-grab active:cursor-grabbing"
-            style={{ width: '220px', height: '220px' }}
-          >
-            {/* 1. ROTATING OUTER KNOB RING (Turns as you drag or step) */}
-            <div
-              className="absolute inset-0 rounded-full flex items-center justify-center transition-transform duration-200 ease-out"
+          <div className="relative flex items-center justify-center my-1 select-none">
+            <svg
+              ref={dialRef}
+              width="260"
+              height="260"
+              viewBox="0 0 260 260"
+              onPointerDown={handlePointerDown}
+              onPointerMove={handlePointerMove}
+              onPointerUp={handlePointerUp}
+              className="touch-none cursor-grab active:cursor-grabbing"
               style={{
-                background: '#dde8ea',
-                boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
-                transform: `rotate(${currentRotation}deg)`,
+                filter: 'drop-shadow(6px 6px 14px #b0bec0) drop-shadow(-6px -6px 14px #ffffff)',
               }}
             >
-              {/* Outer grooved tactile grip teeth */}
-              <div className="absolute inset-1 rounded-full border-2 border-dashed border-[#b8c6c9]/60" />
+              {/* Outer Beveled Dial Track Ring */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r="118"
+                fill="#dde8ea"
+                stroke="#b8c6c9"
+                strokeWidth="1.5"
+              />
 
-              {/* 30-Minute Interval Tick Pips along the outer edge */}
+              {/* Inset Guide Track Arc (270 degrees) */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r={r}
+                fill="none"
+                stroke="rgba(11,60,66,0.12)"
+                strokeWidth="8"
+                strokeDasharray="461"
+                strokeDashoffset="115"
+                transform={`rotate(135 ${cx} ${cy})`}
+                strokeLinecap="round"
+              />
+
+              {/* Slot Pips positioned along the 270-deg arc */}
               {daySlots.map((slot, i) => {
-                const angle = -135 + i * stepAngle
+                const angleDeg = -135 + i * stepAngle
+                const rad = ((angleDeg - 90) * Math.PI) / 180
+                const pipX = cx + r * Math.cos(rad)
+                const pipY = cy + r * Math.sin(rad)
                 const isSelected = i === safeIndex
 
+                const pipColor = isSelected
+                  ? '#fd8451'
+                  : slot.isPast
+                  ? '#c0c8c9'
+                  : !slot.isAvailable
+                  ? '#0b3c42'
+                  : '#ffffff'
+
                 return (
-                  <div
+                  <circle
                     key={slot.id}
-                    className="absolute w-2.5 h-2.5 rounded-full transition-all"
-                    style={{
-                      transform: `rotate(${angle}deg) translate(0, -98px)`,
-                      background: isSelected
-                        ? '#fd8451'
-                        : slot.isPast
-                        ? '#c0c8c9'
-                        : !slot.isAvailable
-                        ? '#0b3c42'
-                        : '#ffffff',
-                      boxShadow: isSelected
-                        ? '0 0 10px #fd8451'
-                        : '1px 1px 3px #b8c6c9',
+                    cx={pipX}
+                    cy={pipY}
+                    r={isSelected ? 6 : 3.5}
+                    fill={pipColor}
+                    stroke={isSelected ? '#ffffff' : '#b8c6c9'}
+                    strokeWidth={isSelected ? 2 : 1}
+                    className="cursor-pointer transition-all duration-150"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setSelectedSlotIndex(i)
                     }}
                   />
                 )
               })}
 
-              {/* The Orange Pointer Notch attached to the outer rotating ring */}
-              <div
-                className="absolute -top-3 w-3.5 h-6 rounded-full"
+              {/* Active Outer Selector Notch (Smoothly glides along the arc) */}
+              <circle
+                cx={activeKnobX}
+                cy={activeKnobY}
+                r="12"
+                fill="#fd8451"
+                stroke="#ffffff"
+                strokeWidth="3"
                 style={{
-                  background: '#fd8451',
-                  boxShadow: '0 2px 8px rgba(253,132,81,0.7)',
+                  filter: 'drop-shadow(0px 3px 6px rgba(253,132,81,0.6))',
+                  transition: isDragging.current ? 'none' : 'cx 180ms ease-out, cy 180ms ease-out',
                 }}
               />
-            </div>
+              <circle
+                cx={activeKnobX}
+                cy={activeKnobY}
+                r="4"
+                fill="#ffffff"
+                style={{
+                  transition: isDragging.current ? 'none' : 'cx 180ms ease-out, cy 180ms ease-out',
+                }}
+              />
+            </svg>
 
-            {/* 2. FIXED CENTER INDICATOR WELL (Always upright in the middle) */}
+            {/* FIXED CENTER INDICATOR WELL (Centered perfectly over the dial) */}
             <div
-              className="relative w-32 h-32 rounded-full flex flex-col items-center justify-center text-center p-3 pointer-events-none z-20"
+              className="absolute w-32 h-32 rounded-full flex flex-col items-center justify-center text-center p-3 pointer-events-none z-20"
               style={{
                 background: '#0b3c42',
                 boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.15)',
@@ -445,7 +495,7 @@ export default function SlotPickerModal({
             </button>
 
             <span className="text-[11px] font-bold text-[#5a7578] text-center">
-              Drag knob or tap buttons • {safeIndex + 1}/{totalSlots}
+              Drag dial or tap pips • {safeIndex + 1}/{totalSlots}
             </span>
 
             <button
