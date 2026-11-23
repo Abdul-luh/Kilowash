@@ -338,20 +338,29 @@ export default function SlotPickerModal({
             </span>
           </div>
 
-          {/* Current Solar / Daylight Status Bar */}
-          <div
-            className="px-4 py-1 rounded-full flex items-center gap-2 text-xs font-bold text-[#0b3c42]"
-            style={{
-              background: '#dde8ea',
-              boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
-            }}
-          >
-            <span className="material-symbols-outlined text-[16px]" style={{ color: phaseColor }}>
-              {phaseIcon}
-            </span>
-            <span>{dayPhase}</span>
-            <span className="text-[#8aa8ab]">•</span>
-            <span className="text-[#fd8451]">{currentSlot.startTime}</span>
+          {/* Current Solar / Daylight Status Bar & Turn Dial Hint */}
+          <div className="flex flex-col items-center gap-1.5 w-full">
+            <div
+              className="px-4 py-1 rounded-full flex items-center gap-2 text-xs font-bold text-[#0b3c42]"
+              style={{
+                background: '#dde8ea',
+                boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+              }}
+            >
+              <span className="material-symbols-outlined text-[16px]" style={{ color: phaseColor }}>
+                {phaseIcon}
+              </span>
+              <span>{dayPhase}</span>
+              <span className="text-[#8aa8ab]">•</span>
+              <span className="text-[#fd8451]">{currentSlot.startTime}</span>
+            </div>
+
+            {/* Explicit animated prompt instructing user to turn knob */}
+            <div className="inline-flex items-center gap-1.5 text-[11px] font-extrabold text-[#fd8451] uppercase tracking-wider animate-pulse">
+              <span className="material-symbols-outlined text-[15px]">rotate_right</span>
+              <span>Turn dial to set your 30-min time</span>
+              <span className="material-symbols-outlined text-[15px]">rotate_left</span>
+            </div>
           </div>
 
           {/* ============================================================== */}
@@ -433,24 +442,48 @@ export default function SlotPickerModal({
               <circle
                 cx={activeKnobX}
                 cy={activeKnobY}
-                r="12"
+                r="13"
                 fill="#fd8451"
                 stroke="#ffffff"
-                strokeWidth="3"
+                strokeWidth="3.5"
                 style={{
-                  filter: 'drop-shadow(0px 3px 6px rgba(253,132,81,0.6))',
+                  filter: 'drop-shadow(0px 3px 8px rgba(253,132,81,0.7))',
                   transition: isDragging.current ? 'none' : 'cx 180ms ease-out, cy 180ms ease-out',
                 }}
               />
               <circle
                 cx={activeKnobX}
                 cy={activeKnobY}
-                r="4"
+                r="4.5"
                 fill="#ffffff"
                 style={{
                   transition: isDragging.current ? 'none' : 'cx 180ms ease-out, cy 180ms ease-out',
                 }}
               />
+
+              {/* Directional curved arrows on track indicating rotary turn affordance */}
+              <text
+                x="32"
+                y="190"
+                fill="#8aa8ab"
+                fontSize="10"
+                fontWeight="800"
+                fontFamily="sans-serif"
+                transform="rotate(-20 32 190)"
+              >
+                ↻ TURN
+              </text>
+              <text
+                x="200"
+                y="190"
+                fill="#8aa8ab"
+                fontSize="10"
+                fontWeight="800"
+                fontFamily="sans-serif"
+                transform="rotate(20 200 190)"
+              >
+                TURN ↺
+              </text>
             </svg>
 
             {/* FIXED CENTER INDICATOR WELL (Centered perfectly over the dial) */}
@@ -478,6 +511,12 @@ export default function SlotPickerModal({
               >
                 {currentSlot.isPast ? 'Passed' : !currentSlot.isAvailable ? 'Booked' : 'Available'}
               </span>
+
+              {/* Hand turn micro-icon indicator inside center well */}
+              <div className="flex items-center gap-1 text-[8px] text-[#fd8451] uppercase font-bold mt-1 tracking-wider">
+                <span className="material-symbols-outlined text-[10px]">drag_handle</span>
+                <span>DRAG KNOB</span>
+              </div>
             </div>
           </div>
 
