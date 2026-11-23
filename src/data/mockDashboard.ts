@@ -1,6 +1,7 @@
 import machineImg from '../assets/the machine.png'
 import foldedTsImg from '../assets/folded Ts.png'
 import foldedShirtsImg from '../assets/folded-shirts.png'
+import pinImg from '../assets/pin.png'
 
 export interface Bay {
   id: string
@@ -171,4 +172,4 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   },
 ]
 
-export { machineImg, foldedTsImg, foldedShirtsImg }
+export { machineImg, foldedTsImg, foldedShirtsImg, pinImg }

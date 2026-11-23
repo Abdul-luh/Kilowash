@@ -4,7 +4,7 @@ import {
   INITIAL_BAYS,
   MOCK_HISTORY,
   machineImg,
-  foldedTsImg,
+  pinImg,
   foldedShirtsImg,
   type Bay,
   type BookingSlot,
@@ -224,25 +224,15 @@ export default function Dashboard() {
                   boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
                 }}
               >
-                {/* Neumorphic Inset Depth Background Shapes (Cloth & Drum Motifs) */}
+                {/* Inset Depth Background with Pin Image Motif */}
                 <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" aria-hidden>
-                  {/* Inset circular wash drum depth well */}
-                  <div
-                    className="absolute -top-12 -right-12 w-48 h-48 rounded-full"
-                    style={{
-                      background: '#dde8ea',
-                      boxShadow: 'inset 8px 8px 18px #b8c6c9, inset -8px -8px 18px #ffffff',
-                      opacity: 0.7,
-                    }}
-                  />
-
-                  {/* Soft 3D Folded Clothing Motif floating gently in the background */}
+                  {/* Pin Image in place of folded Ts and circle */}
                   <img
-                    src={foldedTsImg}
+                    src={pinImg}
                     alt=""
                     aria-hidden="true"
-                    className="absolute -top-4 -right-2 w-28 h-auto object-contain opacity-25 pointer-events-none"
-                    style={{ filter: 'drop-shadow(2px 4px 6px rgba(11,60,66,0.15))' }}
+                    className="absolute -top-3 -right-3 w-32 sm:w-36 h-auto object-contain opacity-30 pointer-events-none"
+                    style={{ filter: 'drop-shadow(3px 6px 10px rgba(11,60,66,0.18))' }}
                   />
 
                   {/* Secondary folded cloth shape lower left */}
