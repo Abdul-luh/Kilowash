@@ -26,7 +26,7 @@ export interface BookingSlot {
   timeLabel: string
   startTime: string
   endTime: string
-  hour24: number // for daylight calculations (8 to 21)
+  hour24: number // for daylight calculations (e.g. 8.0, 8.5, 9.0 ...)
   isAvailable: boolean
   isPast?: boolean
 }
@@ -65,7 +65,7 @@ export const INITIAL_BAYS: Bay[] = [
     status: 'available',
     statusLabel: 'Available',
     rate: 1500,
-    cycleDurationMinutes: 35,
+    cycleDurationMinutes: 30,
     bufferMinutes: 10,
     waterTemp: 'Cold Eco',
     solarBatteryLevel: 94,
@@ -80,7 +80,7 @@ export const INITIAL_BAYS: Bay[] = [
     status: 'busy',
     statusLabel: 'Busy (14m)',
     rate: 1500,
-    cycleDurationMinutes: 35,
+    cycleDurationMinutes: 30,
     bufferMinutes: 10,
     remainingMinutes: 14,
     waterTemp: 'Cold Eco',
@@ -88,36 +88,54 @@ export const INITIAL_BAYS: Bay[] = [
   },
 ]
 
-export const MULTI_DAY_SLOTS: BookingSlot[] = [
-  // Today's Slots (8 AM to 9 PM)
-  { id: 'today-1', day: 'today', dayLabel: 'Today', timeLabel: '08:00 AM – 08:45 AM', startTime: '08:00 AM', endTime: '08:45 AM', hour24: 8, isAvailable: false, isPast: true },
-  { id: 'today-2', day: 'today', dayLabel: 'Today', timeLabel: '09:00 AM – 09:45 AM', startTime: '09:00 AM', endTime: '09:45 AM', hour24: 9, isAvailable: false, isPast: true },
-  { id: 'today-3', day: 'today', dayLabel: 'Today', timeLabel: '10:00 AM – 10:45 AM', startTime: '10:00 AM', endTime: '10:45 AM', hour24: 10, isAvailable: false, isPast: true },
-  { id: 'today-4', day: 'today', dayLabel: 'Today', timeLabel: '11:00 AM – 11:45 AM', startTime: '11:00 AM', endTime: '11:45 AM', hour24: 11, isAvailable: false, isPast: true },
-  { id: 'today-5', day: 'today', dayLabel: 'Today', timeLabel: '12:00 PM – 12:45 PM', startTime: '12:00 PM', endTime: '12:45 PM', hour24: 12, isAvailable: false, isPast: false },
-  { id: 'today-6', day: 'today', dayLabel: 'Today', timeLabel: '01:00 PM – 01:45 PM', startTime: '01:00 PM', endTime: '01:45 PM', hour24: 13, isAvailable: true, isPast: false },
-  { id: 'today-7', day: 'today', dayLabel: 'Today', timeLabel: '02:00 PM – 02:45 PM', startTime: '02:00 PM', endTime: '02:45 PM', hour24: 14, isAvailable: true, isPast: false },
-  { id: 'today-8', day: 'today', dayLabel: 'Today', timeLabel: '03:00 PM – 03:45 PM', startTime: '03:00 PM', endTime: '03:45 PM', hour24: 15, isAvailable: true, isPast: false },
-  { id: 'today-9', day: 'today', dayLabel: 'Today', timeLabel: '04:00 PM – 04:45 PM', startTime: '04:00 PM', endTime: '04:45 PM', hour24: 16, isAvailable: true, isPast: false },
-  { id: 'today-10', day: 'today', dayLabel: 'Today', timeLabel: '05:00 PM – 05:45 PM', startTime: '05:00 PM', endTime: '05:45 PM', hour24: 17, isAvailable: true, isPast: false },
-  { id: 'today-11', day: 'today', dayLabel: 'Today', timeLabel: '06:00 PM – 06:45 PM', startTime: '06:00 PM', endTime: '06:45 PM', hour24: 18, isAvailable: true, isPast: false },
-  { id: 'today-12', day: 'today', dayLabel: 'Today', timeLabel: '07:00 PM – 07:45 PM', startTime: '07:00 PM', endTime: '07:45 PM', hour24: 19, isAvailable: true, isPast: false },
-  { id: 'today-13', day: 'today', dayLabel: 'Today', timeLabel: '08:00 PM – 08:45 PM', startTime: '08:00 PM', endTime: '08:45 PM', hour24: 20, isAvailable: true, isPast: false },
+// Generate 30-minute interval slots from 07:00 AM to 09:30 PM
+function generate30MinSlots(day: 'today' | 'tomorrow', dayLabel: string): BookingSlot[] {
+  const slots: BookingSlot[] = []
+  // From 7:00 AM (7.0) to 9:30 PM (21.5)
+  for (let h = 7; h <= 21; h++) {
+    for (const m of [0, 30]) {
+      if (h === 21 && m > 30) continue // stop at 21:30
 
-  // Tomorrow's Slots (1 day ahead advance booking)
-  { id: 'tmr-1', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '08:00 AM – 08:45 AM', startTime: '08:00 AM', endTime: '08:45 AM', hour24: 8, isAvailable: true, isPast: false },
-  { id: 'tmr-2', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '09:00 AM – 09:45 AM', startTime: '09:00 AM', endTime: '09:45 AM', hour24: 9, isAvailable: true, isPast: false },
-  { id: 'tmr-3', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '10:00 AM – 10:45 AM', startTime: '10:00 AM', endTime: '10:45 AM', hour24: 10, isAvailable: true, isPast: false },
-  { id: 'tmr-4', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '11:00 AM – 11:45 AM', startTime: '11:00 AM', endTime: '11:45 AM', hour24: 11, isAvailable: true, isPast: false },
-  { id: 'tmr-5', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '12:00 PM – 12:45 PM', startTime: '12:00 PM', endTime: '12:45 PM', hour24: 12, isAvailable: false, isPast: false },
-  { id: 'tmr-6', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '01:00 PM – 01:45 PM', startTime: '01:00 PM', endTime: '01:45 PM', hour24: 13, isAvailable: true, isPast: false },
-  { id: 'tmr-7', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '02:00 PM – 02:45 PM', startTime: '02:00 PM', endTime: '02:45 PM', hour24: 14, isAvailable: true, isPast: false },
-  { id: 'tmr-8', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '03:00 PM – 03:45 PM', startTime: '03:00 PM', endTime: '03:45 PM', hour24: 15, isAvailable: true, isPast: false },
-  { id: 'tmr-9', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '04:00 PM – 04:45 PM', startTime: '04:00 PM', endTime: '04:45 PM', hour24: 16, isAvailable: true, isPast: false },
-  { id: 'tmr-10', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '05:00 PM – 05:45 PM', startTime: '05:00 PM', endTime: '05:45 PM', hour24: 17, isAvailable: true, isPast: false },
-  { id: 'tmr-11', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '06:00 PM – 06:45 PM', startTime: '06:00 PM', endTime: '06:45 PM', hour24: 18, isAvailable: true, isPast: false },
-  { id: 'tmr-12', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '07:00 PM – 07:45 PM', startTime: '07:00 PM', endTime: '07:45 PM', hour24: 19, isAvailable: true, isPast: false },
-  { id: 'tmr-13', day: 'tomorrow', dayLabel: 'Tomorrow', timeLabel: '08:00 PM – 08:45 PM', startTime: '08:00 PM', endTime: '08:45 PM', hour24: 20, isAvailable: true, isPast: false },
+      const startH = h
+      const startM = m
+      const endTotalM = h * 60 + m + 30
+      const endH = Math.floor(endTotalM / 60)
+      const endM = endTotalM % 60
+
+      const formatTime = (hour: number, minute: number) => {
+        const period = hour >= 12 ? 'PM' : 'AM'
+        const displayH = hour % 12 === 0 ? 12 : hour % 12
+        return `${String(displayH).padStart(2, '0')}:${String(minute).padStart(2, '0')} ${period}`
+      }
+
+      const startStr = formatTime(startH, startM)
+      const endStr = formatTime(endH, endM)
+      const hourDecimal = h + m / 60
+
+      // Simulate a few past slots for today
+      const isPast = day === 'today' && hourDecimal < 11.5
+      // Simulate a couple occupied slots
+      const isAvailable = !isPast && !(day === 'today' && (hourDecimal === 12.0 || hourDecimal === 14.5))
+
+      slots.push({
+        id: `${day}-${h}-${m}`,
+        day,
+        dayLabel,
+        timeLabel: `${startStr} – ${endStr}`,
+        startTime: startStr,
+        endTime: endStr,
+        hour24: hourDecimal,
+        isAvailable,
+        isPast,
+      })
+    }
+  }
+  return slots
+}
+
+export const MULTI_DAY_SLOTS: BookingSlot[] = [
+  ...generate30MinSlots('today', 'Today'),
+  ...generate30MinSlots('tomorrow', 'Tomorrow'),
 ]
 
 export const MOCK_HISTORY: WashHistoryItem[] = [
@@ -126,7 +144,7 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
     bayId: 'BAY-01',
     bayName: 'Inverter Master A',
     date: 'Today, 22 Nov',
-    time: '01:00 PM – 01:45 PM',
+    time: '01:00 PM – 01:30 PM',
     pin: '7394',
     amount: 1500,
     status: 'Active',
@@ -136,7 +154,7 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
     bayId: 'BAY-01',
     bayName: 'Inverter Master A',
     date: '18 Nov 2026',
-    time: '04:00 PM – 04:45 PM',
+    time: '04:00 PM – 04:30 PM',
     pin: '4829',
     amount: 1500,
     status: 'Completed',
@@ -146,7 +164,7 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
     bayId: 'BAY-02',
     bayName: 'Inverter Master B',
     date: '14 Nov 2026',
-    time: '11:00 AM – 11:45 AM',
+    time: '11:00 AM – 11:30 AM',
     pin: '2105',
     amount: 1700,
     status: 'Completed',
