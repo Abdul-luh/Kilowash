@@ -173,15 +173,11 @@ export default function SlotPickerModal({
   }
 
   // SVG Geometry constants for pure distortion-free rendering
-  const cx = 130
-  const cy = 130
-  const r = 98
+  const cx = 135
+  const cy = 135
 
-  // Active slot coordinates on SVG arc
+  // Active slot rotation angle on 270-degree arc (-135deg to +135deg)
   const activeAngleDeg = -135 + safeIndex * stepAngle
-  const activeRad = ((activeAngleDeg - 90) * Math.PI) / 180
-  const activeKnobX = cx + r * Math.cos(activeRad)
-  const activeKnobY = cy + r * Math.sin(activeRad)
 
   if (!isOpen) return null
 
@@ -355,154 +351,333 @@ export default function SlotPickerModal({
           </div>
 
           {/* ============================================================== */}
-          {/* SVG ROTARY DIAL: MATHEMATICALLY PERFECT GEOMETRY (ZERO DISTORTION) */}
+          {/* TACTILE ROTARY WASHER KNOB: PHYSICAL KNURLED MACHINE DIAL */}
           {/* ============================================================== */}
-          <div className="relative flex items-center justify-center my-1 select-none">
+          <div className="relative flex items-center justify-center my-2 select-none">
             <svg
               ref={dialRef}
-              width="260"
-              height="260"
-              viewBox="0 0 260 260"
+              width="270"
+              height="270"
+              viewBox="0 0 270 270"
               onPointerDown={handlePointerDown}
               onPointerMove={handlePointerMove}
               onPointerUp={handlePointerUp}
               className="touch-none cursor-grab active:cursor-grabbing"
               style={{
-                filter: 'drop-shadow(6px 6px 14px #b0bec0) drop-shadow(-6px -6px 14px #ffffff)',
+                filter: 'drop-shadow(6px 8px 16px #b0bec0) drop-shadow(-6px -6px 14px #ffffff)',
               }}
             >
-              {/* Outer Beveled Dial Track Ring */}
+              <defs>
+                {/* Metallic & Clay Gradients */}
+                <radialGradient id="knobBodyGrad" cx="35%" cy="30%" r="70%">
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="45%" stopColor="#dde8ea" />
+                  <stop offset="85%" stopColor="#c5d4d7" />
+                  <stop offset="100%" stopColor="#b4c5c8" />
+                </radialGradient>
+
+                <linearGradient id="bezelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+                  <stop offset="0%" stopColor="#ffffff" />
+                  <stop offset="50%" stopColor="#dde8ea" />
+                  <stop offset="100%" stopColor="#aabdc0" />
+                </linearGradient>
+
+                <linearGradient id="pointerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+                  <stop offset="0%" stopColor="#ff9a6c" />
+                  <stop offset="100%" stopColor="#ea580c" />
+                </linearGradient>
+
+                <filter id="pointerGlow" x="-20%" y="-20%" width="140%" height="140%">
+                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#fd8451" floodOpacity="0.65" />
+                </filter>
+              </defs>
+
+              {/* 1. STATIONARY BASE PLATE & GAUGE FACE */}
               <circle
                 cx={cx}
                 cy={cy}
-                r="118"
+                r="126"
                 fill="#dde8ea"
-                stroke="#b8c6c9"
+                stroke="#c2d1d4"
                 strokeWidth="1.5"
               />
 
-              {/* Inset Guide Track Arc (270 degrees) */}
+              {/* Recessed guide track channel */}
               <circle
                 cx={cx}
                 cy={cy}
-                r={r}
+                r="115"
                 fill="none"
-                stroke="rgba(11,60,66,0.12)"
-                strokeWidth="8"
-                strokeDasharray="461"
-                strokeDashoffset="115"
+                stroke="rgba(11,60,66,0.14)"
+                strokeWidth="14"
+                strokeDasharray="478"
+                strokeDashoffset="119"
                 transform={`rotate(135 ${cx} ${cy})`}
                 strokeLinecap="round"
               />
 
-              {/* Slot Pips positioned along the 270-deg arc (Only upcoming slots!) */}
+              {/* Stationary Slot Ticks etched into base plate */}
               {daySlots.map((slot, i) => {
                 const angleDeg = -135 + i * stepAngle
                 const rad = ((angleDeg - 90) * Math.PI) / 180
-                const pipX = cx + r * Math.cos(rad)
-                const pipY = cy + r * Math.sin(rad)
                 const isSelected = i === safeIndex
 
-                const pipColor = isSelected
-                  ? '#fd8451'
-                  : !slot.isAvailable
-                  ? '#0b3c42'
-                  : '#ffffff'
+                // Inner and outer coordinates for radial tick marks
+                const rInner = isSelected ? 108 : 110
+                const rOuter = isSelected ? 122 : 118
+                const x1 = cx + rInner * Math.cos(rad)
+                const y1 = cy + rInner * Math.sin(rad)
+                const x2 = cx + rOuter * Math.cos(rad)
+                const y2 = cy + rOuter * Math.sin(rad)
 
                 return (
-                  <circle
+                  <g
                     key={slot.id}
-                    cx={pipX}
-                    cy={pipY}
-                    r={isSelected ? 6 : 3.5}
-                    fill={pipColor}
-                    stroke={isSelected ? '#ffffff' : '#b8c6c9'}
-                    strokeWidth={isSelected ? 2 : 1}
-                    className="cursor-pointer transition-all duration-150"
+                    className="cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation()
                       setSelectedSlotIndex(i)
                     }}
-                  />
+                  >
+                    {/* Tick Mark Line */}
+                    <line
+                      x1={x1}
+                      y1={y1}
+                      x2={x2}
+                      y2={y2}
+                      stroke={
+                        isSelected
+                          ? '#fd8451'
+                          : !slot.isAvailable
+                          ? '#0b3c42'
+                          : '#8aa8ab'
+                      }
+                      strokeWidth={isSelected ? 4 : 2}
+                      strokeLinecap="round"
+                      style={
+                        isSelected
+                          ? { filter: 'drop-shadow(0px 0px 4px rgba(253,132,81,0.8))' }
+                          : {}
+                      }
+                    />
+
+                    {/* Luminous Pip on Active Slot */}
+                    {isSelected && (
+                      <circle
+                        cx={x2}
+                        cy={y2}
+                        r="3.5"
+                        fill="#ffffff"
+                        stroke="#fd8451"
+                        strokeWidth="1.5"
+                      />
+                    )}
+                  </g>
                 )
               })}
 
-              {/* Active Outer Selector Notch (Smoothly glides along the arc) */}
-              <circle
-                cx={activeKnobX}
-                cy={activeKnobY}
-                r="13"
-                fill="#fd8451"
-                stroke="#ffffff"
-                strokeWidth="3.5"
-                style={{
-                  filter: 'drop-shadow(0px 3px 8px rgba(253,132,81,0.7))',
-                  transition: isDragging.current ? 'none' : 'cx 180ms ease-out, cy 180ms ease-out',
-                }}
-              />
-              <circle
-                cx={activeKnobX}
-                cy={activeKnobY}
-                r="4.5"
-                fill="#ffffff"
-                style={{
-                  transition: isDragging.current ? 'none' : 'cx 180ms ease-out, cy 180ms ease-out',
-                }}
-              />
-
-              {/* Directional curved arrows on track indicating rotary turn affordance */}
+              {/* Arc Range Labels (Start & End markers) */}
               <text
                 x="32"
-                y="190"
+                y="218"
                 fill="#8aa8ab"
-                fontSize="10"
+                fontSize="9"
                 fontWeight="800"
                 fontFamily="sans-serif"
-                transform="rotate(-20 32 190)"
+                transform="rotate(-25 32 218)"
               >
-                ↻ TURN
+                MIN
               </text>
               <text
-                x="200"
-                y="190"
+                x="214"
+                y="218"
                 fill="#8aa8ab"
-                fontSize="10"
+                fontSize="9"
                 fontWeight="800"
                 fontFamily="sans-serif"
-                transform="rotate(20 200 190)"
+                transform="rotate(25 214 218)"
               >
-                TURN ↺
+                MAX
               </text>
+
+              {/* 2. ROTATING CYLINDRICAL WASHER KNOB (Physically turns with touch/drag) */}
+              <g
+                transform={`rotate(${activeAngleDeg} ${cx} ${cy})`}
+                style={{
+                  transition: isDragging.current
+                    ? 'none'
+                    : 'transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)',
+                  transformOrigin: `${cx}px ${cy}px`,
+                }}
+              >
+                {/* Outer Knob Rim with Chamfer */}
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="103"
+                  fill="url(#knobBodyGrad)"
+                  stroke="url(#bezelGrad)"
+                  strokeWidth="2.5"
+                  style={{
+                    filter: 'drop-shadow(0 4px 10px rgba(11,60,66,0.18))',
+                  }}
+                />
+
+                {/* Tactile Knurled Grip Ridges (36 grooves around perimeter) */}
+                {Array.from({ length: 36 }).map((_, idx) => {
+                  const ridgeAngle = (idx * 360) / 36
+                  const rad = ((ridgeAngle - 90) * Math.PI) / 180
+                  const r1 = 92
+                  const r2 = 101
+                  const rx1 = cx + r1 * Math.cos(rad)
+                  const ry1 = cy + r1 * Math.sin(rad)
+                  const rx2 = cx + r2 * Math.cos(rad)
+                  const ry2 = cy + r2 * Math.sin(rad)
+                  return (
+                    <line
+                      key={idx}
+                      x1={rx1}
+                      y1={ry1}
+                      x2={rx2}
+                      y2={ry2}
+                      stroke="rgba(11,60,66,0.22)"
+                      strokeWidth="2.5"
+                      strokeLinecap="round"
+                    />
+                  )
+                })}
+
+                {/* Inner Stepped Bezel Ring */}
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="89"
+                  fill="#dde8ea"
+                  stroke="#c5d4d7"
+                  strokeWidth="2"
+                />
+
+                {/* Concentric Tactile Grip Ring Groove */}
+                <circle
+                  cx={cx}
+                  cy={cy}
+                  r="78"
+                  fill="none"
+                  stroke="rgba(11,60,66,0.12)"
+                  strokeWidth="3"
+                  strokeDasharray="6 4"
+                />
+
+                {/* THE ROTATING POINTER NOTCH (Pointing directly outward at active slot) */}
+                {/* Precision Pointer Needle Housing */}
+                <path
+                  d={`M ${cx - 7} ${cy - 80} L ${cx} ${cy - 108} L ${cx + 7} ${cy - 80} Z`}
+                  fill="url(#pointerGrad)"
+                  filter="url(#pointerGlow)"
+                  stroke="#ffffff"
+                  strokeWidth="1.5"
+                />
+
+                {/* Luminous Center Indicator Notch */}
+                <line
+                  x1={cx}
+                  y1={cy - 82}
+                  x2={cx}
+                  y2={cy - 106}
+                  stroke="#ffffff"
+                  strokeWidth="2.5"
+                  strokeLinecap="round"
+                />
+
+                {/* Micro LED Dot on Pointer */}
+                <circle
+                  cx={cx}
+                  cy={cy - 92}
+                  r="2.5"
+                  fill="#ffffff"
+                />
+              </g>
+
+              {/* 3. FIXED DIGITAL OLED TELEMETRY SCREEN (Centered Hub, stays upright) */}
+              {/* Outer Chamfer Ring for Center Portal */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r="66"
+                fill="#dde8ea"
+                stroke="#b8c6c9"
+                strokeWidth="2"
+              />
+
+              {/* Recessed Dark OLED Glass Portal */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r="63"
+                fill="#052226"
+                stroke="rgba(162, 206, 213, 0.3)"
+                strokeWidth="1.5"
+                style={{
+                  filter: 'drop-shadow(inset 0 3px 8px rgba(0,0,0,0.7))',
+                }}
+              />
+
+              {/* Inner Decorative Dial Ring */}
+              <circle
+                cx={cx}
+                cy={cy}
+                r="56"
+                fill="none"
+                stroke="rgba(253, 132, 81, 0.2)"
+                strokeWidth="1"
+                strokeDasharray="3 3"
+              />
             </svg>
 
-            {/* FIXED CENTER INDICATOR WELL (Centered perfectly over the dial) */}
+            {/* FIXED CENTER DIGITAL DISPLAY CONTENT (HTML overlay for ultra-crisp typography) */}
             <div
-              className="absolute w-32 h-32 rounded-full flex flex-col items-center justify-center text-center p-3 pointer-events-none z-20"
+              className="absolute w-30 h-30 rounded-full flex flex-col items-center justify-center text-center p-2 pointer-events-none z-20"
               style={{
-                background: '#0b3c42',
-                boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.5), inset -2px -2px 5px rgba(255,255,255,0.15)',
                 color: '#ffffff',
               }}
             >
-              <span className="text-[9px] uppercase font-bold tracking-wider text-[#a2ced5]">Selected Slot</span>
-              <span className="text-base font-black leading-tight text-white tabular-nums mt-0.5">
+              {/* Day Phase Mini Badge */}
+              <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-[#a2ced5]">
+                <span className="material-symbols-outlined text-[11px]" style={{ color: phaseColor }}>
+                  {phaseIcon}
+                </span>
+                <span>{dayPhase.split(' ')[0]}</span>
+              </div>
+
+              {/* Large Digital Clock Display */}
+              <span className="text-lg font-black leading-tight text-white tabular-nums tracking-tight mt-0.5">
                 {currentSlot.startTime}
               </span>
-              <span className="text-[10px] text-[#a2ced5] leading-none mt-0.5">30-min wash</span>
-              <span
-                className={`text-[9px] font-extrabold uppercase px-2 py-0.5 rounded-full mt-1 ${
-                  !currentSlot.isAvailable
-                    ? 'bg-red-900/60 text-red-200'
-                    : 'bg-emerald-900/60 text-emerald-300'
-                }`}
-              >
-                {!currentSlot.isAvailable ? 'Booked' : 'Available'}
+
+              {/* Cycle Subtitle */}
+              <span className="text-[9px] text-[#a2ced5] font-semibold leading-none mt-0.5">
+                30m Cycle
               </span>
 
-              {/* Hand turn micro-icon indicator inside center well */}
-              <div className="flex items-center gap-1 text-[8px] text-[#fd8451] uppercase font-bold mt-1 tracking-wider">
-                <span className="material-symbols-outlined text-[10px]">drag_handle</span>
-                <span>DRAG KNOB</span>
+              {/* Availability Badge */}
+              <span
+                className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full mt-1.5 flex items-center gap-1 ${
+                  !currentSlot.isAvailable
+                    ? 'bg-red-950/80 text-red-300 border border-red-500/30'
+                    : 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full ${
+                    !currentSlot.isAvailable ? 'bg-red-400' : 'bg-emerald-400 animate-pulse'
+                  }`}
+                />
+                <span>{!currentSlot.isAvailable ? 'Booked' : 'Available'}</span>
+              </span>
+
+              {/* Drag Affordance Micro Hint */}
+              <div className="flex items-center gap-0.5 text-[7px] text-[#fd8451] uppercase font-black mt-1 tracking-widest">
+                <span>ROTATE KNOB</span>
               </div>
             </div>
           </div>
