@@ -43,9 +43,11 @@ export default function SlotPickerModal({
     )
   }, [selectedDate])
 
-  // Generate 24-hour slots (48 total) for the selected date
+  // Generate 24-hour slots for the selected date (excluding passed times completely)
   const daySlots = useMemo(() => {
-    return generate24HourSlotsForDate(selectedDate)
+    const rawSlots = generate24HourSlotsForDate(selectedDate)
+    // Only show booked and available slots; do not show passed times
+    return rawSlots.filter(s => !s.isPast)
   }, [selectedDate])
 
   // Auto-select the first available slot when date changes (if no valid selection)
@@ -69,7 +71,6 @@ export default function SlotPickerModal({
   // Slot counts for summary
   const availableCount = useMemo(() => daySlots.filter(s => s.isAvailable).length, [daySlots])
   const bookedCount = useMemo(() => daySlots.filter(s => s.isBooked).length, [daySlots])
-  const passedCount = useMemo(() => daySlots.filter(s => s.isPast).length, [daySlots])
 
   // Multi-day date horizontal list (Generate 14 days starting from today or current date window)
   const upcomingDays = useMemo(() => {
@@ -135,7 +136,7 @@ export default function SlotPickerModal({
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-[#0b3c42]/50 backdrop-blur-sm animate-fadeIn">
       <div
-        className="w-full max-w-2xl rounded-3xl p-4 sm:p-7 flex flex-col gap-4 relative max-h-[92vh] overflow-y-auto"
+        className="w-full max-w-4xl rounded-3xl p-4 sm:p-7 flex flex-col gap-4 relative max-h-[92vh] overflow-y-auto"
         style={{
           background: '#dde8ea',
           boxShadow: '16px 16px 36px #b0bec0, -16px -16px 36px #ffffff',
@@ -152,7 +153,7 @@ export default function SlotPickerModal({
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
               >
                 <span className="material-symbols-outlined text-[14px]">calendar_month</span>
-                <span>24-Hour Schedule Calendar</span>
+                <span>Schedule Calendar</span>
               </span>
               <span className="text-xs text-[#5a7578] font-semibold">{bay.hall}</span>
             </div>
@@ -308,7 +309,7 @@ export default function SlotPickerModal({
             }}
           >
             {[
-              { id: 'all', label: 'All 24h (48)', icon: 'schedule' },
+              { id: 'all', label: `All (${daySlots.length})`, icon: 'schedule' },
               { id: 'morning', label: 'Morning (6A–12P)', icon: 'wb_twilight' },
               { id: 'afternoon', label: 'Afternoon (12P–5P)', icon: 'sunny' },
               { id: 'evening', label: 'Evening (5P–9P)', icon: 'wb_sunny' },
@@ -339,7 +340,7 @@ export default function SlotPickerModal({
             })}
           </div>
 
-          {/* Slot Availability Legend */}
+          {/* Slot Availability Legend (Only Booked and Available) */}
           <div className="flex items-center gap-3 text-[11px] font-bold text-[#5a7578] px-1 self-end sm:self-auto">
             <span className="flex items-center gap-1">
               <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
@@ -349,29 +350,23 @@ export default function SlotPickerModal({
               <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block" />
               <span>{bookedCount} Booked</span>
             </span>
-            {passedCount > 0 && (
-              <span className="flex items-center gap-1 text-[#8aa8ab]">
-                <span className="w-2.5 h-2.5 rounded-full bg-[#b8c6c9] inline-block" />
-                <span>{passedCount} Passed</span>
-              </span>
-            )}
           </div>
         </div>
 
         {/* ============================================================== */}
-        {/* 24-HOUR 30-MIN SLOTS GRID (CALENDLY STYLE WITH CHECKBOXES) */}
+        {/* 2-COLUMN MOBILE / 4-COLUMN DESKTOP GRADUAL SLOTS GRID */}
         {/* ============================================================== */}
         <div
-          className="rounded-3xl p-3 sm:p-4 max-h-[380px] overflow-y-auto flex flex-col gap-2"
+          className="rounded-3xl p-3 sm:p-4 max-h-[390px] overflow-y-auto flex flex-col gap-2"
           style={{
             background: '#dde8ea',
             boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
           }}
         >
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+          {/* Responsive Gradual Grid: 1 col on ultra-narrow (<340px), 2 cols on mobile, 3 on tablet, 4 on desktop */}
+          <div className="grid grid-cols-1 min-[340px]:grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-2 sm:gap-2.5">
             {filteredSlots.map(slot => {
               const isSelected = selectedSlot?.id === slot.id
-              const isPast = slot.isPast
               const isBooked = slot.isBooked
               const isAvailable = slot.isAvailable
 
@@ -383,10 +378,8 @@ export default function SlotPickerModal({
                 <div
                   key={slot.id}
                   onClick={() => isAvailable && handleSelectSlot(slot)}
-                  className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 transition-all select-none ${
-                    isPast
-                      ? 'opacity-40 cursor-not-allowed'
-                      : isBooked
+                  className={`p-2.5 sm:p-3 rounded-2xl flex items-center justify-between gap-2 transition-all select-none ${
+                    isBooked
                       ? 'opacity-65 cursor-not-allowed'
                       : isSelected
                       ? 'cursor-pointer text-white ring-2 ring-[#fd8451]'
@@ -398,7 +391,7 @@ export default function SlotPickerModal({
                           background: '#0b3c42',
                           boxShadow: '4px 4px 12px rgba(11,60,66,0.35), -2px -2px 6px #ffffff',
                         }
-                      : isPast || isBooked
+                      : isBooked
                       ? {
                           background: '#d4e0e2',
                           boxShadow: 'inset 2px 2px 5px #bcc9cc, inset -2px -2px 5px #ffffff',
@@ -410,13 +403,13 @@ export default function SlotPickerModal({
                   }
                 >
                   {/* Left: Checkbox Icon & Time Range */}
-                  <div className="flex items-center gap-2.5 min-w-0">
+                  <div className="flex items-center gap-2 min-w-0">
                     {/* Checkbox indicator */}
                     <div
-                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                      className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
                         isSelected
                           ? 'bg-[#fd8451] text-white shadow-sm'
-                          : isPast || isBooked
+                          : isBooked
                           ? 'bg-transparent text-[#8aa8ab]'
                           : 'bg-[#dde8ea] text-[#8aa8ab]'
                       }`}
@@ -429,55 +422,45 @@ export default function SlotPickerModal({
                           : {}
                       }
                     >
-                      <span className="material-symbols-outlined text-[16px]">
-                        {isSelected
-                          ? 'check'
-                          : isPast
-                          ? 'lock_clock'
-                          : isBooked
-                          ? 'block'
-                          : 'schedule'}
+                      <span className="material-symbols-outlined text-[13px]">
+                        {isSelected ? 'check' : isBooked ? 'block' : 'schedule'}
                       </span>
                     </div>
 
                     {/* Time Text */}
                     <div className="flex flex-col min-w-0">
                       <span
-                        className={`text-xs font-black tracking-tight leading-tight tabular-nums ${
+                        className={`text-[11px] sm:text-xs font-black tracking-tight leading-tight tabular-nums truncate ${
                           isSelected ? 'text-white' : 'text-[#0b3c42]'
                         }`}
                       >
                         {slot.startTime}
                       </span>
                       <span
-                        className={`text-[10px] leading-tight truncate ${
+                        className={`text-[9px] leading-tight truncate ${
                           isSelected ? 'text-[#a2ced5]' : 'text-[#5a7578]'
                         }`}
                       >
-                        until {slot.endTime}
+                        to {slot.endTime}
                       </span>
                     </div>
                   </div>
 
-                  {/* Right: Status Pill or Solar Tag */}
+                  {/* Right: Status Pill or Rate */}
                   <div className="flex flex-col items-end shrink-0">
-                    {isPast ? (
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-[#b8c6c9]/40 text-[#5a7578]">
-                        Passed
-                      </span>
-                    ) : isBooked ? (
-                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-800">
+                    {isBooked ? (
+                      <span className="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-800">
                         Booked
                       </span>
                     ) : isSelected ? (
-                      <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-[#fd8451] text-white flex items-center gap-1">
-                        <span>Selected</span>
+                      <span className="text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase bg-[#fd8451] text-white">
+                        Selected
                       </span>
                     ) : (
                       <div className="flex items-center gap-1">
                         {isPeakSolar && (
                           <span
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase text-[#fd8451] flex items-center gap-0.5"
+                            className="text-[8px] font-bold px-1 py-0.5 rounded-full uppercase text-[#fd8451] flex items-center"
                             style={{
                               background: '#dde8ea',
                               boxShadow:
@@ -485,13 +468,12 @@ export default function SlotPickerModal({
                             }}
                             title="Peak Solar Window"
                           >
-                            <span className="material-symbols-outlined text-[11px]">sunny</span>
-                            <span>Peak</span>
+                            <span className="material-symbols-outlined text-[10px]">sunny</span>
                           </span>
                         )}
                         {isNight && (
                           <span
-                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase text-[#5a7578] flex items-center gap-0.5"
+                            className="text-[8px] font-bold px-1 py-0.5 rounded-full uppercase text-[#5a7578] flex items-center"
                             style={{
                               background: '#dde8ea',
                               boxShadow:
@@ -499,10 +481,10 @@ export default function SlotPickerModal({
                             }}
                             title="100% Inverter Buffer"
                           >
-                            <span className="material-symbols-outlined text-[11px]">bedtime</span>
+                            <span className="material-symbols-outlined text-[10px]">bedtime</span>
                           </span>
                         )}
-                        <span className="text-xs font-extrabold text-[#fd8451]">
+                        <span className="text-[11px] sm:text-xs font-extrabold text-[#fd8451]">
                           ₦{bay.rate.toLocaleString()}
                         </span>
                       </div>
@@ -514,11 +496,33 @@ export default function SlotPickerModal({
           </div>
 
           {filteredSlots.length === 0 && (
-            <div className="py-8 flex flex-col items-center justify-center text-center text-xs text-[#5a7578] gap-2">
-              <span className="material-symbols-outlined text-[28px] text-[#8aa8ab]">
-                event_busy
-              </span>
-              <span>No slots in this time window. Try selecting "All 24h" above.</span>
+            <div className="py-8 px-4 flex flex-col items-center justify-center text-center text-xs text-[#5a7578] gap-3">
+              <div
+                className="w-12 h-12 rounded-2xl flex items-center justify-center text-[#fd8451]"
+                style={{ background: '#dde8ea', boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff' }}
+              >
+                <span className="material-symbols-outlined text-[24px]">event_available</span>
+              </div>
+              <div>
+                <h4 className="font-extrabold text-[#0b3c42] text-sm">
+                  {isDateToday ? "Today's Laundry Hours Have Ended" : 'No Slots in this Time Period'}
+                </h4>
+                <p className="text-[11px] text-[#5a7578] mt-1 max-w-xs">
+                  {isDateToday
+                    ? 'All slots for today have completed. Click below to view tomorrow’s open schedule.'
+                    : 'Try selecting "All" above to see all upcoming slots for this day.'}
+                </p>
+              </div>
+              {isDateToday && (
+                <button
+                  type="button"
+                  onClick={handleNextDay}
+                  className="mt-1 px-4 py-2 rounded-full font-bold text-xs text-white bg-[#0b3c42] shadow flex items-center gap-1.5 active:scale-95 transition-all"
+                >
+                  <span>Advance to Tomorrow</span>
+                  <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -527,7 +531,7 @@ export default function SlotPickerModal({
         {/* SELECTED SLOT SUMMARY & CONFIRM CHECKOUT BAR */}
         {/* ============================================================== */}
         <div className="flex flex-col gap-3 pt-1 border-t border-[#b8c6c9]/40">
-          {selectedSlot ? (
+          {/* {selectedSlot ? (
             <div
               className="p-3.5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5"
               style={{
@@ -579,7 +583,7 @@ export default function SlotPickerModal({
             >
               Please pick any available 30-minute time slot from the schedule above.
             </div>
-          )}
+          )} */}
 
           {/* Checkout CTA */}
           <button
