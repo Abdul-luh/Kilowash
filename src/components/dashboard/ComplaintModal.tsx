@@ -315,7 +315,7 @@ export default function ComplaintModal({
               </label>
 
               <div
-                className="p-1 rounded-2xl flex items-center gap-1"
+                className="p-1.5 rounded-2xl grid grid-cols-2 sm:grid-cols-4 gap-1.5"
                 style={{
                   background: '#dde8ea',
                   boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
@@ -323,15 +323,19 @@ export default function ComplaintModal({
               >
                 {[
                   { id: 'BAY-01', label: 'Female Hostel (01)' },
-                  { id: 'BAY-02', label: 'Front-Middle (02)' },
-                  { id: 'BAY-03', label: 'PDS Male (03)' },
-                  { id: 'BAY-04', label: 'PDS Female (04)' },
+                  { id: 'BAY-02', label: 'Female Hostel (02)' },
+                  { id: 'BAY-03', label: 'Front-Middle (03)' },
+                  { id: 'BAY-04', label: 'Front-Middle (04)' },
+                  { id: 'BAY-05', label: 'PDS Male (05)' },
+                  { id: 'BAY-06', label: 'PDS Male (06)' },
+                  { id: 'BAY-07', label: 'PDS Female (07)' },
+                  { id: 'BAY-08', label: 'PDS Female (08)' },
                 ].map(item => (
                   <button
                     key={item.id}
                     type="button"
                     onClick={() => setBayId(item.id)}
-                    className={`flex-1 py-1.5 px-2 rounded-xl text-xs font-bold transition-all ${
+                    className={`py-1.5 px-2 rounded-xl text-[11px] font-bold transition-all text-center truncate ${
                       bayId === item.id
                         ? 'bg-[#0b3c42] text-white shadow'
                         : 'text-[#5a7578] hover:text-[#0b3c42]'

@@ -38,7 +38,10 @@ export interface ActiveCycle {
   bookingId: string
   bayId: string
   bayName: string
-  pin: string
+  location: string
+  machineName: string
+  pin?: string
+  isUserBooking?: boolean
   remainingSeconds: number
   totalSeconds: number
   stage: 'Wash' | 'Rinse' | 'Spin' | 'Buffer / Unload'
@@ -57,7 +60,38 @@ export interface WashHistoryItem {
   status: 'Completed' | 'Forfeited' | 'Active'
 }
 
+export const INITIAL_ACTIVE_CYCLES: ActiveCycle[] = [
+  {
+    bookingId: 'BK-4108',
+    bayId: 'BAY-02',
+    bayName: 'Female Hostel',
+    location: 'Female Hostel',
+    machineName: 'Machine 02',
+    pin: '5182',
+    isUserBooking: true,
+    remainingSeconds: 18 * 60 + 24,
+    totalSeconds: 35 * 60,
+    stage: 'Rinse',
+    washType: '35-Min Eco Cold Wash',
+    powerSource: '100% Inverter Solar',
+  },
+  {
+    bookingId: 'BK-7721',
+    bayId: 'BAY-05',
+    bayName: 'PDS Male Hostel',
+    location: 'PDS Male Hostel',
+    machineName: 'Machine 05',
+    isUserBooking: false,
+    remainingSeconds: 9 * 60 + 15,
+    totalSeconds: 30 * 60,
+    stage: 'Spin',
+    washType: 'Standard 30-Min Cold Wash',
+    powerSource: '100% Inverter Solar',
+  },
+]
+
 export const INITIAL_BAYS: Bay[] = [
+  // 1. Female Hostel (2 machines)
   {
     id: 'BAY-01',
     name: 'Female Hostel',
@@ -75,9 +109,92 @@ export const INITIAL_BAYS: Bay[] = [
   },
   {
     id: 'BAY-02',
-    name: 'Front-Middle Block',
+    name: 'Female Hostel',
     subname: 'Machine 02',
-    hall: 'Front-middle block',
+    hall: 'Female Hostel',
+    capacity: '10kg Drum • In Rinse Cycle',
+    type: 'standard',
+    status: 'busy',
+    statusLabel: 'Busy (18m)',
+    rate: 1500,
+    cycleDurationMinutes: 30,
+    bufferMinutes: 10,
+    remainingMinutes: 18,
+    waterTemp: 'Cold Eco',
+    solarBatteryLevel: 94,
+  },
+
+  // 2. Front-Middle Block (2 machines)
+  {
+    id: 'BAY-03',
+    name: 'Front-Middle Block',
+    subname: 'Machine 03',
+    hall: 'Front-Middle Block',
+    capacity: '10kg Drum • Clean & Primed',
+    type: 'standard',
+    status: 'available',
+    statusLabel: 'Available',
+    rate: 1500,
+    cycleDurationMinutes: 30,
+    bufferMinutes: 10,
+    waterTemp: 'Cold Eco',
+    solarBatteryLevel: 95,
+  },
+  {
+    id: 'BAY-04',
+    name: 'Front-Middle Block',
+    subname: 'Machine 04',
+    hall: 'Front-Middle Block',
+    capacity: '10kg Drum • Clean & Primed',
+    type: 'standard',
+    status: 'available',
+    statusLabel: 'Available',
+    rate: 1500,
+    cycleDurationMinutes: 30,
+    bufferMinutes: 10,
+    waterTemp: 'Cold Eco',
+    solarBatteryLevel: 93,
+  },
+
+  // 3. PDS Male Hostel (2 machines)
+  {
+    id: 'BAY-05',
+    name: 'PDS Male Hostel',
+    subname: 'Machine 05',
+    hall: 'PDS Male Hostel',
+    capacity: '10kg Drum • Active Spin Cycle',
+    type: 'standard',
+    status: 'busy',
+    statusLabel: 'Busy (9m)',
+    rate: 1500,
+    cycleDurationMinutes: 30,
+    bufferMinutes: 10,
+    remainingMinutes: 9,
+    waterTemp: 'Cold Eco',
+    solarBatteryLevel: 91,
+  },
+  {
+    id: 'BAY-06',
+    name: 'PDS Male Hostel',
+    subname: 'Machine 06',
+    hall: 'PDS Male Hostel',
+    capacity: '10kg Drum • Clean & Primed',
+    type: 'standard',
+    status: 'available',
+    statusLabel: 'Available',
+    rate: 1500,
+    cycleDurationMinutes: 30,
+    bufferMinutes: 10,
+    waterTemp: 'Cold Eco',
+    solarBatteryLevel: 96,
+  },
+
+  // 4. PDS Female Hostel (2 machines)
+  {
+    id: 'BAY-07',
+    name: 'PDS Female Hostel',
+    subname: 'Machine 07',
+    hall: 'PDS Female Hostel',
     capacity: '10kg Drum • Clean & Primed',
     type: 'standard',
     status: 'available',
@@ -89,25 +206,9 @@ export const INITIAL_BAYS: Bay[] = [
     solarBatteryLevel: 94,
   },
   {
-    id: 'BAY-03',
-    name: 'PDS Male Hostel',
-    subname: 'Machine 03',
-    hall: 'PDS Male Hostel',
-    capacity: '10kg Drum • Active Spin Cycle',
-    type: 'standard',
-    status: 'busy',
-    statusLabel: 'Busy (12m)',
-    rate: 1500,
-    cycleDurationMinutes: 30,
-    bufferMinutes: 10,
-    remainingMinutes: 12,
-    waterTemp: 'Cold Eco',
-    solarBatteryLevel: 92,
-  },
-  {
-    id: 'BAY-04',
+    id: 'BAY-08',
     name: 'PDS Female Hostel',
-    subname: 'Machine 04',
+    subname: 'Machine 08',
     hall: 'PDS Female Hostel',
     capacity: '10kg Drum • Clean & Primed',
     type: 'standard',
@@ -198,19 +299,19 @@ export const MULTI_DAY_SLOTS: BookingSlot[] = [
 
 export const MOCK_HISTORY: WashHistoryItem[] = [
   {
-    id: 'BK-9482',
-    bayId: 'BAY-01',
-    bayName: 'Machine 01',
-    date: 'Today, 22 Nov',
-    time: '01:00 PM – 01:30 PM',
-    pin: '7394',
+    id: 'BK-4108',
+    bayId: 'BAY-02',
+    bayName: 'Machine 02 (Female Hostel)',
+    date: 'Today, Just Now',
+    time: '11:00 AM – 11:30 AM',
+    pin: '5182',
     amount: 1500,
     status: 'Active',
   },
   {
     id: 'BK-8291',
     bayId: 'BAY-01',
-    bayName: 'Machine 01',
+    bayName: 'Machine 01 (Female Hostel)',
     date: '18 Nov 2026',
     time: '04:00 PM – 04:30 PM',
     pin: '4829',
@@ -219,8 +320,8 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   },
   {
     id: 'BK-7104',
-    bayId: 'BAY-02',
-    bayName: 'Machine 02',
+    bayId: 'BAY-04',
+    bayName: 'Machine 04 (Front-Middle)',
     date: '14 Nov 2026',
     time: '11:00 AM – 11:30 AM',
     pin: '2105',

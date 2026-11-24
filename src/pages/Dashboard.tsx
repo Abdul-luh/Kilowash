@@ -2,10 +2,9 @@ import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   INITIAL_BAYS,
+  INITIAL_ACTIVE_CYCLES,
   MOCK_HISTORY,
   machineImg,
-  // pinImg,
-  // foldedShirtsImg,
   type Bay,
   type BookingSlot,
   type ActiveCycle,
@@ -16,7 +15,8 @@ import GuideModal from '../components/dashboard/GuideModal'
 import ComplaintModal from '../components/dashboard/ComplaintModal'
 
 export default function Dashboard() {
-  const [bays] = useState<Bay[]>(INITIAL_BAYS)
+  const [bays, setBays] = useState<Bay[]>(INITIAL_BAYS)
+  const [selectedLocation, setSelectedLocation] = useState<string>('all')
   const [selectedBay, setSelectedBay] = useState<Bay | null>(null)
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
   const [isGuideModalOpen, setIsGuideModalOpen] = useState(false)
@@ -27,57 +27,46 @@ export default function Dashboard() {
   // Current active navigation tab: 'bays' | 'history' | 'guide'
   const [activeTab, setActiveTab] = useState<'bays' | 'history' | 'guide'>('bays')
 
-  // Active running wash simulation
-  const [activeCycle, setActiveCycle] = useState<ActiveCycle | null>({
-    bookingId: 'BK-9482',
-    bayId: 'BAY-01',
-    bayName: 'Bay Node 01',
-    pin: '7394',
-    remainingSeconds: 22 * 60 + 36, // 22 mins 36 secs
-    totalSeconds: 35 * 60,
-    stage: 'Rinse',
-    washType: '35-Min Cold Inverter Wash',
-    powerSource: '100% Inverter Solar',
-  })
+  // Active running wash cycles across campus machines (can be multiple simultaneously)
+  const [activeCycles, setActiveCycles] = useState<ActiveCycle[]>(INITIAL_ACTIVE_CYCLES)
+  const [expandedPinHelpId, setExpandedPinHelpId] = useState<string | null>(null)
 
   // Wash history
   const [history, setHistory] = useState<WashHistoryItem[]>(MOCK_HISTORY)
 
   // Copy feedback state
   const [copiedPinId, setCopiedPinId] = useState<string | null>(null)
-  // const [showPinHelp, setShowPinHelp] = useState(false)
 
-  // Active countdown timer effect
+  // Active countdown timer effect for all running cycles simultaneously
   useEffect(() => {
-    if (!activeCycle || activeCycle.remainingSeconds <= 0) return
+    if (activeCycles.length === 0) return
 
     const interval = setInterval(() => {
-      setActiveCycle(prev => {
-        if (!prev) return null
-        if (prev.remainingSeconds <= 1) {
-          return {
-            ...prev,
-            remainingSeconds: 0,
-            stage: 'Buffer / Unload',
+      setActiveCycles(prev =>
+        prev.map(cycle => {
+          if (cycle.remainingSeconds <= 1) {
+            return {
+              ...cycle,
+              remainingSeconds: 0,
+              stage: 'Buffer / Unload' as const,
+            }
           }
-        }
-        return {
-          ...prev,
-          remainingSeconds: prev.remainingSeconds - 1,
-        }
-      })
+          return {
+            ...cycle,
+            remainingSeconds: cycle.remainingSeconds - 1,
+          }
+        })
+      )
     }, 1000)
 
     return () => clearInterval(interval)
-  }, [activeCycle])
+  }, [activeCycles.length])
 
-  /*
   function formatTime(totalSec: number) {
     const mins = Math.floor(totalSec / 60)
     const secs = totalSec % 60
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
-  */
 
   function handleCopyPin(pinToCopy: string, bookingId?: string) {
     if (navigator.clipboard) {
@@ -101,24 +90,43 @@ export default function Dashboard() {
     const newBookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`
 
     // Set new active cycle
-    setActiveCycle({
+    const newCycle: ActiveCycle = {
       bookingId: newBookingId,
       bayId: selectedBay.id,
       bayName: selectedBay.name,
+      location: selectedBay.hall,
+      machineName: selectedBay.subname,
       pin: randomPin,
-      remainingSeconds: 35 * 60,
-      totalSeconds: 35 * 60,
+      isUserBooking: true,
+      remainingSeconds: 30 * 60,
+      totalSeconds: 30 * 60,
       stage: 'Wash',
-      washType: `35-Min Eco Cold Wash${addDetergent ? ' (+ Pod Kit)' : ''}`,
+      washType: `30-Min Eco Cold Wash${addDetergent ? ' (+ Pod Kit)' : ''}`,
       powerSource: '100% Inverter Solar',
-    })
+    }
+
+    setActiveCycles(prev => [newCycle, ...prev])
+
+    // Update bay status
+    setBays(prev =>
+      prev.map(b =>
+        b.id === selectedBay.id
+          ? {
+              ...b,
+              status: 'busy',
+              statusLabel: 'Busy (30m)',
+              remainingMinutes: 30,
+            }
+          : b
+      )
+    )
 
     // Prepend to history
     setHistory(prev => [
       {
         id: newBookingId,
         bayId: selectedBay.id,
-        bayName: selectedBay.subname,
+        bayName: `${selectedBay.subname} (${selectedBay.name})`,
         date: slot.day === 'today' ? 'Today, Just Now' : 'Tomorrow (Advance)',
         time: slot.timeLabel,
         pin: randomPin,
@@ -132,14 +140,18 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
-  /*
-  // Calculate circular SVG progress offset
-  const circumference = 264
-  const progressRatio = activeCycle
-    ? activeCycle.remainingSeconds / activeCycle.totalSeconds
-    : 0
-  const strokeDashoffset = circumference * (1 - progressRatio)
-  */
+  const LOCATION_OPTIONS = [
+    { id: 'all', label: 'All Campus Spots', count: bays.length },
+    { id: 'Female Hostel', label: 'Female Hostel', count: bays.filter(b => b.name === 'Female Hostel').length },
+    { id: 'Front-Middle Block', label: 'Front-Middle', count: bays.filter(b => b.name === 'Front-Middle Block').length },
+    { id: 'PDS Male Hostel', label: 'PDS Male', count: bays.filter(b => b.name === 'PDS Male Hostel').length },
+    { id: 'PDS Female Hostel', label: 'PDS Female', count: bays.filter(b => b.name === 'PDS Female Hostel').length },
+  ]
+
+  const filteredBays =
+    selectedLocation === 'all'
+      ? bays
+      : bays.filter(bay => bay.name.toLowerCase() === selectedLocation.toLowerCase())
 
   return (
     <div
@@ -180,7 +192,7 @@ export default function Dashboard() {
             style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
           >
             <span className="material-symbols-outlined text-[14px] text-[#fd8451]">location_on</span>
-            <span>4 Campus Locations</span>
+            <span>4 Campus Spots • 8 Machines</span>
           </div>
         </div>
 
@@ -236,205 +248,268 @@ export default function Dashboard() {
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 pt-24 pb-28 flex flex-col gap-6">
 
         {/* ============================================================== */}
-        {/* VIEW 1: BAYS OVERVIEW & ACTIVE CYCLE */}
+        {/* VIEW 1: BAYS OVERVIEW & ACTIVE CYCLES */}
         {/* ============================================================== */}
         {activeTab === 'bays' && (
           <>
-            {/* Active Wash & Keypad PIN Hero Card — temporarily commented out per request */}
-            {/*
-            {activeCycle && (
-              <section
-                className="relative w-full rounded-3xl p-5 sm:p-7 overflow-hidden flex flex-col gap-5 animate-fadeIn"
-                style={{
-                  background: '#dde8ea',
-                  boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
-                }}
-              >
-                <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" aria-hidden>
-                  <img
-                    src={pinImg}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute -top-3 -right-3 w-32 sm:w-36 h-auto object-contain opacity-30 pointer-events-none"
-                    style={{ filter: 'drop-shadow(3px 6px 10px rgba(11,60,66,0.18))' }}
-                  />
-
-                  <img
-                    src={foldedShirtsImg}
-                    alt=""
-                    aria-hidden="true"
-                    className="absolute -bottom-6 -left-6 w-24 h-auto object-contain opacity-15 pointer-events-none"
-                    style={{ filter: 'drop-shadow(2px 4px 6px rgba(11,60,66,0.1))' }}
-                  />
-
-                  <div
-                    className="absolute bottom-2 right-12 w-32 h-16 rounded-full"
-                    style={{
-                      background: '#dde8ea',
-                      boxShadow: 'inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff',
-                      opacity: 0.45,
-                    }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between gap-2 relative z-10">
-                  <div
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
-                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                  >
-                    <span className="material-symbols-outlined text-[15px] text-[#fd8451]">sync</span>
-                    <span>Active Cycle • {activeCycle.bayId}</span>
-                  </div>
-
-                  <div
-                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold text-[#5a7578]"
-                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                  >
-                    <span className="material-symbols-outlined text-[15px] text-[#fd8451]">solar_power</span>
-                    <span className="text-[#0b3c42]">{activeCycle.powerSource}</span>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-4 sm:gap-6 pt-1 relative z-10">
-                  <div
-                    className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl p-2 flex items-center justify-center"
-                    style={{
-                      background: '#dde8ea',
-                      boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
-                    }}
-                  >
-                    <svg className="absolute inset-1.5 w-[calc(100%-12px)] h-[calc(100%-12px)] -rotate-90 pointer-events-none" viewBox="0 0 100 100">
-                      <circle className="stroke-[#b8c6c9]/40 fill-none" cx="50" cy="50" r="42" strokeWidth="5" />
-                      <circle
-                        className="fill-none transition-all duration-1000 stroke-[#fd8451]"
-                        cx="50" cy="50" r="42"
-                        strokeWidth="5"
-                        strokeDasharray={circumference}
-                        strokeDashoffset={strokeDashoffset}
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                    <img
-                      src={machineImg}
-                      alt="Kilowash 3D Washer"
-                      className="w-16 h-16 sm:w-20 sm:h-20 object-contain drop-shadow-[0_8px_12px_rgba(11,60,66,0.2)] animate-pulse"
-                    />
-                  </div>
-
-                  <div className="flex flex-col min-w-0 flex-1">
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#8aa8ab] flex items-center gap-1">
-                      <span className="material-symbols-outlined text-[14px] text-[#5a7578]">schedule</span>
-                      Remaining Wash Time
+            {/* Active Wash Cycles Section — displays any machines currently running wash cycles */}
+            {activeCycles.length > 0 && (
+              <section className="flex flex-col gap-3">
+                <div className="flex items-center justify-between gap-2 px-1">
+                  <div className="flex items-center gap-2">
+                    <span className="material-symbols-outlined text-[20px] text-[#fd8451] animate-spin" style={{ animationDuration: '6s' }}>
+                      progress_activity
                     </span>
-                    <div className="flex items-baseline gap-1.5 mt-0.5">
-                      <span className="text-3xl sm:text-4xl font-extrabold text-[#0b3c42] tracking-tight tabular-nums">
-                        {formatTime(activeCycle.remainingSeconds)}
-                      </span>
-                      <span className="text-xs text-[#5a7578] font-bold">mins</span>
-                    </div>
-                    <div className="flex items-center gap-2 mt-1 text-xs text-[#5a7578]">
-                      <span className="truncate text-[#0b3c42] font-semibold">{activeCycle.washType}</span>
-                      <span>•</span>
-                      <span className="text-[#fd8451] font-bold flex items-center gap-1">
-                        <span className="material-symbols-outlined text-[13px]">cyclone</span>
-                        {activeCycle.stage} Stage
-                      </span>
-                    </div>
+                    <h2 className="text-base sm:text-lg font-extrabold text-[#0b3c42]">
+                      Machines Currently in Use
+                    </h2>
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#fd8451] uppercase"
+                      style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                    >
+                      {activeCycles.length} Running {activeCycles.length === 1 ? 'Cycle' : 'Cycles'}
+                    </span>
                   </div>
+
+                  <span className="text-[11px] font-bold text-[#5a7578] hidden sm:inline">
+                    Simultaneous Campus Telemetry
+                  </span>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {activeCycles.map(cycle => {
+                    const progressRatio = cycle.totalSeconds > 0 ? cycle.remainingSeconds / cycle.totalSeconds : 0
+                    const circumference = 210
+                    const strokeDashoffset = circumference * (1 - progressRatio)
+
+                    return (
+                      <div
+                        key={cycle.bookingId}
+                        className="relative rounded-3xl p-5 overflow-hidden flex flex-col justify-between gap-4 transition-all"
+                        style={{
+                          background: '#dde8ea',
+                          boxShadow: '8px 8px 20px #b0bec0, -8px -8px 20px #ffffff',
+                        }}
+                      >
+                        {/* Top tag strip */}
+                        <div className="flex items-center justify-between gap-2 relative z-10">
+                          <div
+                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
+                            style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                          >
+                            <span className="material-symbols-outlined text-[14px] text-[#fd8451]">cyclone</span>
+                            <span>{cycle.bayId} • {cycle.machineName}</span>
+                          </div>
+
+                          {cycle.isUserBooking ? (
+                            <div
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-800"
+                              style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                            >
+                              <span className="material-symbols-outlined text-[13px] text-emerald-700">person</span>
+                              <span>Your Wash</span>
+                            </div>
+                          ) : (
+                            <div
+                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-[#5a7578]"
+                              style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                            >
+                              <span className="material-symbols-outlined text-[13px] text-[#fd8451]">apartment</span>
+                              <span>Campus In-Use</span>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Center Visual & Countdown */}
+                        <div className="flex items-center gap-4 pt-1 relative z-10">
+                          <div
+                            className="relative shrink-0 w-20 h-20 rounded-2xl p-2 flex items-center justify-center"
+                            style={{
+                              background: '#dde8ea',
+                              boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff',
+                            }}
+                          >
+                            <svg className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] -rotate-90 pointer-events-none" viewBox="0 0 80 80">
+                              <circle className="stroke-[#b8c6c9]/40 fill-none" cx="40" cy="40" r="33.4" strokeWidth="4" />
+                              <circle
+                                className="fill-none transition-all duration-1000 stroke-[#fd8451]"
+                                cx="40" cy="40" r="33.4"
+                                strokeWidth="4"
+                                strokeDasharray={circumference}
+                                strokeDashoffset={strokeDashoffset}
+                                strokeLinecap="round"
+                              />
+                            </svg>
+                            <img
+                              src={machineImg}
+                              alt={cycle.machineName}
+                              className="w-12 h-12 object-contain drop-shadow-[0_4px_8px_rgba(11,60,66,0.18)] animate-pulse"
+                            />
+                          </div>
+
+                          <div className="flex flex-col min-w-0 flex-1">
+                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8aa8ab]">
+                              {cycle.location}
+                            </span>
+                            <div className="flex items-baseline gap-1.5 mt-0.5">
+                              <span className="text-2xl sm:text-3xl font-extrabold text-[#0b3c42] tracking-tight tabular-nums">
+                                {formatTime(cycle.remainingSeconds)}
+                              </span>
+                              <span className="text-xs text-[#5a7578] font-bold">mins</span>
+                            </div>
+                            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#5a7578] truncate">
+                              <span className="text-[#fd8451] font-bold flex items-center gap-0.5">
+                                <span className="material-symbols-outlined text-[13px]">cyclone</span>
+                                {cycle.stage} Stage
+                              </span>
+                              <span>•</span>
+                              <span className="truncate text-[#0b3c42] font-semibold">{cycle.washType}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Bottom Action / Keypad / Occupancy Well */}
+                        {cycle.isUserBooking && cycle.pin ? (
+                          <div
+                            className="w-full rounded-2xl p-3 text-white flex items-center justify-between gap-2 relative z-10"
+                            style={{
+                              background: '#0b3c42',
+                              boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.45), inset -2px -2px 6px rgba(255,255,255,0.1)',
+                            }}
+                          >
+                            <div className="flex items-center gap-2.5 min-w-0">
+                              <span className="material-symbols-outlined text-[#fd8451] text-[20px] shrink-0">pin</span>
+                              <div className="flex flex-col leading-none">
+                                <span className="text-[9px] uppercase font-bold tracking-wider text-[#a2ced5]">
+                                  Unlock PIN
+                                </span>
+                                <span className="text-xl font-black tracking-widest text-white tabular-nums mt-0.5">
+                                  {cycle.pin}
+                                </span>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-1.5">
+                              <button
+                                onClick={() => handleCopyPin(cycle.pin!, cycle.bookingId)}
+                                className="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all text-xs font-bold flex items-center gap-1 text-white"
+                                style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
+                              >
+                                <span className="material-symbols-outlined text-[14px]">
+                                  {copiedPinId === cycle.bookingId ? 'check' : 'content_copy'}
+                                </span>
+                                <span>{copiedPinId === cycle.bookingId ? 'Copied!' : 'Copy'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => setExpandedPinHelpId(expandedPinHelpId === cycle.bookingId ? null : cycle.bookingId)}
+                                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
+                                title="Keypad instructions"
+                              >
+                                <span className="material-symbols-outlined text-[16px]">help_outline</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          <div
+                            className="w-full rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs relative z-10"
+                            style={{
+                              background: '#dde8ea',
+                              boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                            }}
+                          >
+                            <div className="flex items-center gap-2 text-[#5a7578] min-w-0">
+                              <span className="material-symbols-outlined text-[16px] text-[#fd8451] shrink-0">lock</span>
+                              <span className="truncate text-[11px] font-semibold text-[#0b3c42]">
+                                Drum in use • Frees in ~{Math.ceil(cycle.remainingSeconds / 60)}m
+                              </span>
+                            </div>
+                            <span className="text-[10px] font-bold text-[#8aa8ab] uppercase shrink-0">
+                              Locked
+                            </span>
+                          </div>
+                        )}
+
+                        {expandedPinHelpId === cycle.bookingId && cycle.pin && (
+                          <div
+                            className="p-2.5 rounded-xl text-xs text-[#0b3c42] flex items-start gap-1.5 animate-fadeIn"
+                            style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                          >
+                            <span className="material-symbols-outlined text-[16px] text-[#fd8451] shrink-0 mt-0.5">info</span>
+                            <span className="text-[11px]">
+                              Punch on {cycle.bayId}'s keypad: press <strong>*</strong>, enter <strong>{cycle.pin}</strong>, then press <strong>#</strong>.
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )
+                  })}
+                </div>
+              </section>
+            )}
+
+            {/* Bays Header & Location Filter */}
+            <div className="flex flex-col gap-3 px-1 pt-2">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h2 className="text-lg sm:text-xl font-extrabold text-[#0b3c42]">Campus Washing Spots</h2>
+                    <span
+                      className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#fd8451] uppercase flex items-center gap-1"
+                      style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                    >
+                      <span className="material-symbols-outlined text-[12px] text-[#fd8451]">apartment</span>
+                      4 Locations • 8 Machines
+                    </span>
+                  </div>
+                  <p className="text-xs text-[#5a7578] mt-0.5">2 machines per spot • Solar-powered smart wash nodes</p>
                 </div>
 
                 <div
-                  className="w-full rounded-2xl p-4 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 relative z-10"
-                  style={{
-                    background: '#0b3c42',
-                    boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.5), inset -2px -2px 6px rgba(255,255,255,0.1)',
-                  }}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] self-start sm:self-auto"
+                  style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
-                      <span className="material-symbols-outlined text-[#fd8451] text-[22px]">pin</span>
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <span className="text-[10px] uppercase font-bold tracking-wider text-[#a2ced5]">
-                        {activeCycle.bayId} Keypad Unlock PIN
-                      </span>
-                      <div className="flex items-center gap-2">
-                        <span className="text-2xl sm:text-3xl font-black tracking-widest text-white tabular-nums">
-                          {activeCycle.pin}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#fd8451] text-[10px] uppercase font-bold tracking-wider flex items-center gap-1">
-                          <span className="material-symbols-outlined text-[11px]">key</span>
-                          Single Use
-                        </span>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    <button
-                      onClick={() => handleCopyPin(activeCycle.pin)}
-                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-1.5 text-white"
-                      style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
-                    >
-                      <span className="material-symbols-outlined text-[16px]">
-                        {copiedPin ? 'check' : 'content_copy'}
-                      </span>
-                      <span>{copiedPin ? 'PIN Copied!' : 'Copy PIN'}</span>
-                    </button>
-
-                    <button
-                      onClick={() => setShowPinHelp(!showPinHelp)}
-                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all flex items-center justify-center"
-                      title="How to punch PIN"
-                    >
-                      <span className="material-symbols-outlined text-[18px]">help_outline</span>
-                    </button>
-                  </div>
+                  <span className="material-symbols-outlined text-[15px] text-emerald-700">check_circle</span>
+                  <span>{bays.filter(b => b.status === 'available').length} Available / {bays.filter(b => b.status === 'busy').length} Busy</span>
                 </div>
-
-                {showPinHelp && (
-                  <div
-                    className="p-3 rounded-xl text-xs text-[#0b3c42] flex items-start gap-2 animate-fadeIn relative z-10"
-                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                  >
-                    <span className="material-symbols-outlined text-[18px] text-[#fd8451] shrink-0 mt-0.5">info</span>
-                    <span>
-                      Type this 4-digit code on {activeCycle.bayId}'s keypad by pressing <strong>*</strong>, typing <strong>{activeCycle.pin}</strong>, and confirming with <strong>#</strong>.
-                    </span>
-                  </div>
-                )}
-              </section>
-            )}
-            */}
-
-            {/* Bays Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 pt-2">
-              <div>
-                <div className="flex items-center gap-2 flex-wrap">
-                  <h2 className="text-lg sm:text-xl font-extrabold text-[#0b3c42]">Campus Washing Spots</h2>
-                  <span
-                    className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#0b3c42] uppercase flex items-center gap-1"
-                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
-                  >
-                    <span className="material-symbols-outlined text-[12px] text-[#fd8451]">apartment</span>
-                    4 Locations
-                  </span>
-                </div>
-                <p className="text-xs text-[#5a7578] mt-0.5">Female Hostel • Front-Middle Block • PDS Male Hostel • PDS Female Hostel</p>
               </div>
 
+              {/* Location Filter Pills */}
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] self-start sm:self-auto"
-                style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                className="p-1 rounded-2xl flex items-center gap-1.5 overflow-x-auto no-scrollbar"
+                style={{
+                  background: '#dde8ea',
+                  boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                }}
               >
-                <span className="material-symbols-outlined text-[15px] text-emerald-700">check_circle</span>
-                <span>{bays.filter(b => b.status === 'available').length} Available / {bays.filter(b => b.status === 'busy').length} Busy</span>
+                {LOCATION_OPTIONS.map(opt => {
+                  const isSelected = selectedLocation === opt.id
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => setSelectedLocation(opt.id)}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold whitespace-nowrap transition-all flex items-center gap-1.5 ${
+                        isSelected ? 'bg-[#0b3c42] text-white shadow' : 'text-[#5a7578] hover:text-[#0b3c42]'
+                      }`}
+                    >
+                      <span>{opt.label}</span>
+                      <span
+                        className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                          isSelected ? 'bg-white/20 text-white' : 'bg-[#b8c6c9]/40 text-[#0b3c42]'
+                        }`}
+                      >
+                        {opt.count}
+                      </span>
+                    </button>
+                  )
+                })}
               </div>
             </div>
 
             {/* Bay Cards Grid with Clear Icons (No raw dots/indicators) */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {bays.map(bay => {
+              {filteredBays.map(bay => {
                 const isAvailable = bay.status === 'available'
 
                 return (
