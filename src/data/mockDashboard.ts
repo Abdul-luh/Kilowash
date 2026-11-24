@@ -49,6 +49,12 @@ export interface ActiveCycle {
   powerSource: '100% Inverter Solar' | 'Battery Buffer'
 }
 
+export interface ReminderSchedule {
+  reminder30: string
+  reminder15: string
+  reminder10: string
+}
+
 export interface WashHistoryItem {
   id: string
   bayId: string
@@ -58,11 +64,12 @@ export interface WashHistoryItem {
   pin: string
   amount: number
   status: 'Booked' | 'Active' | 'Completed' | 'Forfeited'
+  reminderSchedule?: ReminderSchedule
   reminderNotice?: string
   reminderTime?: string
 }
 
-export function calculateReminderTime(timeLabel: string): string {
+export function calculateReminderSchedule(timeLabel: string): ReminderSchedule {
   try {
     const startTimePart = timeLabel.split('–')[0].trim() // e.g. "03:00 PM"
     const [time, period] = startTimePart.split(' ') // "03:00", "PM"
@@ -72,17 +79,32 @@ export function calculateReminderTime(timeLabel: string): string {
     if (period === 'PM' && h !== 12) h += 12
     if (period === 'AM' && h === 12) h = 0
 
-    let reminderTotalM = h * 60 + m - 30
-    if (reminderTotalM < 0) reminderTotalM += 24 * 60
+    const formatOffset = (offsetMinutes: number) => {
+      let totalM = h * 60 + m - offsetMinutes
+      if (totalM < 0) totalM += 24 * 60
+      const remH = Math.floor(totalM / 60)
+      const remM = totalM % 60
+      const remPeriod = remH >= 12 ? 'PM' : 'AM'
+      const displayH = remH % 12 === 0 ? 12 : remH % 12
+      return `${String(displayH).padStart(2, '0')}:${String(remM).padStart(2, '0')} ${remPeriod}`
+    }
 
-    const remH = Math.floor(reminderTotalM / 60)
-    const remM = reminderTotalM % 60
-    const remPeriod = remH >= 12 ? 'PM' : 'AM'
-    const displayH = remH % 12 === 0 ? 12 : remH % 12
-    return `${String(displayH).padStart(2, '0')}:${String(remM).padStart(2, '0')} ${remPeriod}`
+    return {
+      reminder30: formatOffset(30),
+      reminder15: formatOffset(15),
+      reminder10: formatOffset(10),
+    }
   } catch {
-    return '30 mins before wash'
+    return {
+      reminder30: '30m prior',
+      reminder15: '15m prior',
+      reminder10: '10m prior',
+    }
   }
+}
+
+export function calculateReminderTime(timeLabel: string): string {
+  return calculateReminderSchedule(timeLabel).reminder30
 }
 
 export const INITIAL_ACTIVE_CYCLES: ActiveCycle[] = [
@@ -317,7 +339,12 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
     pin: '5182',
     amount: 1500,
     status: 'Booked',
-    reminderNotice: 'SMS reminder scheduled for 02:30 PM (30m before wash)',
+    reminderSchedule: {
+      reminder30: '02:30 PM',
+      reminder15: '02:45 PM',
+      reminder10: '02:50 PM',
+    },
+    reminderNotice: 'Automated reminders at 30m, 15m, and 10m before wash window',
     reminderTime: '02:30 PM',
   },
   {

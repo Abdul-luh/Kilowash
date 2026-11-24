@@ -1,14 +1,12 @@
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import {
   INITIAL_BAYS,
-  INITIAL_ACTIVE_CYCLES,
   MOCK_HISTORY,
-  calculateReminderTime,
+  calculateReminderSchedule,
   machineImg,
   type Bay,
   type BookingSlot,
-  type ActiveCycle,
   type WashHistoryItem,
 } from '../data/mockDashboard'
 import SlotPickerModal from '../components/dashboard/SlotPickerModal'
@@ -39,48 +37,12 @@ export default function Dashboard() {
     reminderTime: string
   } | null>(null)
 
-  // Active running wash cycles across campus machines (can be multiple simultaneously)
-  const [activeCycles, setActiveCycles] = useState<ActiveCycle[]>(INITIAL_ACTIVE_CYCLES)
-  const [expandedPinHelpId, setExpandedPinHelpId] = useState<string | null>(null)
-
   // Wash history & booked sessions
   const [history, setHistory] = useState<WashHistoryItem[]>(MOCK_HISTORY)
 
-  // Copy feedback state
+  // Copy feedback state & keypad guide toggle
   const [copiedPinId, setCopiedPinId] = useState<string | null>(null)
-
-  // Active countdown timer effect for all running cycles simultaneously
-  useEffect(() => {
-    if (activeCycles.length === 0) return
-
-    const interval = setInterval(() => {
-      setActiveCycles(prev =>
-        prev
-          .map(cycle => {
-            if (cycle.remainingSeconds <= 1) {
-              return {
-                ...cycle,
-                remainingSeconds: 0,
-                stage: 'Buffer / Unload' as const,
-              }
-            }
-            return {
-              ...cycle,
-              remainingSeconds: cycle.remainingSeconds - 1,
-            }
-          })
-          .filter(cycle => cycle.remainingSeconds > 0) // when a cycle finishes, it frees the bay
-      )
-    }, 1000)
-
-    return () => clearInterval(interval)
-  }, [activeCycles.length])
-
-  function formatTime(totalSec: number) {
-    const mins = Math.floor(totalSec / 60)
-    const secs = totalSec % 60
-    return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
-  }
+  const [expandedPinHelp, setExpandedPinHelp] = useState(false)
 
   function handleCopyPin(pinToCopy: string, bookingId?: string) {
     if (navigator.clipboard) {
@@ -102,7 +64,7 @@ export default function Dashboard() {
 
     const randomPin = String(Math.floor(1000 + Math.random() * 9000))
     const newBookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`
-    const reminderTime = calculateReminderTime(slot.timeLabel)
+    const schedule = calculateReminderSchedule(slot.timeLabel)
 
     // Prepend to booked sessions in history (does not go to active bays)
     const newBooking: WashHistoryItem = {
@@ -114,8 +76,9 @@ export default function Dashboard() {
       pin: randomPin,
       amount: addDetergent ? selectedBay.rate + 200 : selectedBay.rate,
       status: 'Booked',
-      reminderNotice: `SMS & WhatsApp alert scheduled for ${reminderTime} (30m before wash)`,
-      reminderTime: reminderTime,
+      reminderSchedule: schedule,
+      reminderNotice: `Automated reminders at 30m (${schedule.reminder30}), 15m (${schedule.reminder15}), and 10m (${schedule.reminder10})`,
+      reminderTime: schedule.reminder30,
     }
 
     setHistory(prev => [newBooking, ...prev])
@@ -128,10 +91,16 @@ export default function Dashboard() {
       pin: randomPin,
       bayName: `${selectedBay.subname} (${selectedBay.name})`,
       time: slot.timeLabel,
-      reminderTime: reminderTime,
+      reminderTime: schedule.reminder30,
     })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
+
+  // Get current user's active/upcoming booking
+  const currentBooking = history.find(h => h.status === 'Booked' || h.status === 'Active')
+  const currentReminderSchedule = currentBooking
+    ? currentBooking.reminderSchedule || calculateReminderSchedule(currentBooking.time)
+    : null
 
   const LOCATION_OPTIONS = [
     { id: 'all', label: 'All Campus Spots', count: bays.length },
@@ -251,206 +220,181 @@ export default function Dashboard() {
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 pt-24 pb-28 flex flex-col gap-6">
 
         {/* ============================================================== */}
-        {/* VIEW 1: BAYS OVERVIEW & ACTIVE CYCLES */}
+        {/* VIEW 1: BAYS OVERVIEW & USER'S CURRENT BOOKING */}
         {/* ============================================================== */}
         {activeTab === 'bays' && (
           <>
-            {/* Active Wash Cycles Section — displays running machines or calm idle indicator when no active bays */}
-            {activeCycles.length > 0 ? (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-center justify-between gap-2 px-1">
-                  <div className="flex items-center gap-2">
-                    <span className="material-symbols-outlined text-[20px] text-[#fd8451] animate-spin" style={{ animationDuration: '6s' }}>
-                      progress_activity
-                    </span>
-                    <h2 className="text-base sm:text-lg font-extrabold text-[#0b3c42]">
-                      Machines Currently in Use
-                    </h2>
-                    <span
-                      className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#fd8451] uppercase"
-                      style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
-                    >
-                      {activeCycles.length} Running {activeCycles.length === 1 ? 'Cycle' : 'Cycles'}
-                    </span>
+            {/* User's Current Booking Information Hero Card */}
+            {currentBooking ? (
+              <section
+                className="relative rounded-3xl p-5 sm:p-6 flex flex-col gap-4 overflow-hidden animate-fadeIn"
+                style={{
+                  background: '#dde8ea',
+                  boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
+                }}
+              >
+                {/* Top status strip */}
+                <div className="flex items-center justify-between gap-2">
+                  <div
+                    className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
+                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                  >
+                    <span className="material-symbols-outlined text-[15px] text-[#fd8451]">event_available</span>
+                    <span>Your Current Booking • {currentBooking.id}</span>
                   </div>
 
-                  <span className="text-[11px] font-bold text-[#5a7578] hidden sm:inline">
-                    Simultaneous Campus Telemetry
+                  <span
+                    className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-800"
+                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                  >
+                    <span className="material-symbols-outlined text-[13px] text-emerald-700">check_circle</span>
+                    <span>Confirmed & Ready</span>
                   </span>
                 </div>
 
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {activeCycles.map(cycle => {
-                    const progressRatio = cycle.totalSeconds > 0 ? cycle.remainingSeconds / cycle.totalSeconds : 0
-                    const circumference = 210
-                    const strokeDashoffset = circumference * (1 - progressRatio)
+                {/* Machine & Timing Details */}
+                <div className="flex items-center gap-4">
+                  <div
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl p-2.5 flex items-center justify-center shrink-0"
+                    style={{
+                      background: '#dde8ea',
+                      boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff',
+                    }}
+                  >
+                    <img
+                      src={machineImg}
+                      alt={currentBooking.bayName}
+                      className="w-12 h-12 sm:w-14 sm:h-14 object-contain drop-shadow-[0_4px_8px_rgba(11,60,66,0.18)]"
+                    />
+                  </div>
 
-                    return (
-                      <div
-                        key={cycle.bookingId}
-                        className="relative rounded-3xl p-5 overflow-hidden flex flex-col justify-between gap-4 transition-all"
-                        style={{
-                          background: '#dde8ea',
-                          boxShadow: '8px 8px 20px #b0bec0, -8px -8px 20px #ffffff',
-                        }}
-                      >
-                        {/* Top tag strip */}
-                        <div className="flex items-center justify-between gap-2 relative z-10">
-                          <div
-                            className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
-                            style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                          >
-                            <span className="material-symbols-outlined text-[14px] text-[#fd8451]">cyclone</span>
-                            <span>{cycle.bayId} • {cycle.machineName}</span>
-                          </div>
-
-                          {cycle.isUserBooking ? (
-                            <div
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-emerald-800"
-                              style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                            >
-                              <span className="material-symbols-outlined text-[13px] text-emerald-700">person</span>
-                              <span>Your Wash</span>
-                            </div>
-                          ) : (
-                            <div
-                              className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider text-[#5a7578]"
-                              style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                            >
-                              <span className="material-symbols-outlined text-[13px] text-[#fd8451]">apartment</span>
-                              <span>Campus In-Use</span>
-                            </div>
-                          )}
-                        </div>
-
-                        {/* Center Visual & Countdown */}
-                        <div className="flex items-center gap-4 pt-1 relative z-10">
-                          <div
-                            className="relative shrink-0 w-20 h-20 rounded-2xl p-2 flex items-center justify-center"
-                            style={{
-                              background: '#dde8ea',
-                              boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff',
-                            }}
-                          >
-                            <svg className="absolute inset-1 w-[calc(100%-8px)] h-[calc(100%-8px)] -rotate-90 pointer-events-none" viewBox="0 0 80 80">
-                              <circle className="stroke-[#b8c6c9]/40 fill-none" cx="40" cy="40" r="33.4" strokeWidth="4" />
-                              <circle
-                                className="fill-none transition-all duration-1000 stroke-[#fd8451]"
-                                cx="40" cy="40" r="33.4"
-                                strokeWidth="4"
-                                strokeDasharray={circumference}
-                                strokeDashoffset={strokeDashoffset}
-                                strokeLinecap="round"
-                              />
-                            </svg>
-                            <img
-                              src={machineImg}
-                              alt={cycle.machineName}
-                              className="w-12 h-12 object-contain drop-shadow-[0_4px_8px_rgba(11,60,66,0.18)] animate-pulse"
-                            />
-                          </div>
-
-                          <div className="flex flex-col min-w-0 flex-1">
-                            <span className="text-[10px] font-bold uppercase tracking-wider text-[#8aa8ab]">
-                              {cycle.location}
-                            </span>
-                            <div className="flex items-baseline gap-1.5 mt-0.5">
-                              <span className="text-2xl sm:text-3xl font-extrabold text-[#0b3c42] tracking-tight tabular-nums">
-                                {formatTime(cycle.remainingSeconds)}
-                              </span>
-                              <span className="text-xs text-[#5a7578] font-bold">mins</span>
-                            </div>
-                            <div className="flex items-center gap-1.5 mt-1 text-xs text-[#5a7578] truncate">
-                              <span className="text-[#fd8451] font-bold flex items-center gap-0.5">
-                                <span className="material-symbols-outlined text-[13px]">cyclone</span>
-                                {cycle.stage} Stage
-                              </span>
-                              <span>•</span>
-                              <span className="truncate text-[#0b3c42] font-semibold">{cycle.washType}</span>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Bottom Action / Keypad / Occupancy Well */}
-                        {cycle.isUserBooking && cycle.pin ? (
-                          <div
-                            className="w-full rounded-2xl p-3 text-white flex items-center justify-between gap-2 relative z-10"
-                            style={{
-                              background: '#0b3c42',
-                              boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.45), inset -2px -2px 6px rgba(255,255,255,0.1)',
-                            }}
-                          >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <span className="material-symbols-outlined text-[#fd8451] text-[20px] shrink-0">pin</span>
-                              <div className="flex flex-col leading-none">
-                                <span className="text-[9px] uppercase font-bold tracking-wider text-[#a2ced5]">
-                                  Unlock PIN
-                                </span>
-                                <span className="text-xl font-black tracking-widest text-white tabular-nums mt-0.5">
-                                  {cycle.pin}
-                                </span>
-                              </div>
-                            </div>
-
-                            <div className="flex items-center gap-1.5">
-                              <button
-                                onClick={() => handleCopyPin(cycle.pin!, cycle.bookingId)}
-                                className="px-3 py-1.5 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all text-xs font-bold flex items-center gap-1 text-white"
-                                style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
-                              >
-                                <span className="material-symbols-outlined text-[14px]">
-                                  {copiedPinId === cycle.bookingId ? 'check' : 'content_copy'}
-                                </span>
-                                <span>{copiedPinId === cycle.bookingId ? 'Copied!' : 'Copy'}</span>
-                              </button>
-
-                              <button
-                                onClick={() => setExpandedPinHelpId(expandedPinHelpId === cycle.bookingId ? null : cycle.bookingId)}
-                                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-white transition-all"
-                                title="Keypad instructions"
-                              >
-                                <span className="material-symbols-outlined text-[16px]">help_outline</span>
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                          <div
-                            className="w-full rounded-2xl p-2.5 flex items-center justify-between gap-2 text-xs relative z-10"
-                            style={{
-                              background: '#dde8ea',
-                              boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
-                            }}
-                          >
-                            <div className="flex items-center gap-2 text-[#5a7578] min-w-0">
-                              <span className="material-symbols-outlined text-[16px] text-[#fd8451] shrink-0">lock</span>
-                              <span className="truncate text-[11px] font-semibold text-[#0b3c42]">
-                                Drum in use • Frees in ~{Math.ceil(cycle.remainingSeconds / 60)}m
-                              </span>
-                            </div>
-                            <span className="text-[10px] font-bold text-[#8aa8ab] uppercase shrink-0">
-                              Locked
-                            </span>
-                          </div>
-                        )}
-
-                        {expandedPinHelpId === cycle.bookingId && cycle.pin && (
-                          <div
-                            className="p-2.5 rounded-xl text-xs text-[#0b3c42] flex items-start gap-1.5 animate-fadeIn"
-                            style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
-                          >
-                            <span className="material-symbols-outlined text-[16px] text-[#fd8451] shrink-0 mt-0.5">info</span>
-                            <span className="text-[11px]">
-                              Punch on {cycle.bayId}'s keypad: press <strong>*</strong>, enter <strong>{cycle.pin}</strong>, then press <strong>#</strong>.
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    )
-                  })}
+                  <div className="flex flex-col min-w-0 flex-1">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-[#8aa8ab]">
+                      Reserved Washing Spot
+                    </span>
+                    <h3 className="text-base sm:text-lg font-extrabold text-[#0b3c42] tracking-tight">
+                      {currentBooking.bayName}
+                    </h3>
+                    <div className="flex items-center gap-1.5 mt-0.5 text-xs font-semibold text-[#5a7578] flex-wrap">
+                      <span className="text-[#fd8451] font-bold flex items-center gap-0.5">
+                        <span className="material-symbols-outlined text-[13px]">schedule</span>
+                        {currentBooking.date}
+                      </span>
+                      <span>•</span>
+                      <span className="text-[#0b3c42] font-bold">{currentBooking.time}</span>
+                    </div>
+                  </div>
                 </div>
+
+                {/* Keypad PIN Display & Copy Button */}
+                <div
+                  className="w-full rounded-2xl p-3.5 sm:p-4 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
+                  style={{
+                    background: '#0b3c42',
+                    boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.5), inset -2px -2px 6px rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[#fd8451] text-[22px]">pin</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-[#a2ced5]">
+                        {currentBooking.bayId} Door Unlock PIN
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-2xl sm:text-3xl font-black tracking-widest text-white tabular-nums">
+                          {currentBooking.pin}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#fd8451] text-[9px] uppercase font-bold tracking-wider flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[11px]">key</span>
+                          Single Use
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyPin(currentBooking.pin, currentBooking.id)}
+                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-1.5 text-white"
+                      style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">
+                        {copiedPinId === currentBooking.id ? 'check' : 'content_copy'}
+                      </span>
+                      <span>{copiedPinId === currentBooking.id ? 'PIN Copied!' : 'Copy PIN'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setExpandedPinHelp(!expandedPinHelp)}
+                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all flex items-center justify-center"
+                      title="Keypad unlock instructions"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">help_outline</span>
+                    </button>
+                  </div>
+                </div>
+
+                {expandedPinHelp && (
+                  <div
+                    className="p-3 rounded-xl text-xs text-[#0b3c42] flex items-start gap-2 animate-fadeIn"
+                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-[#fd8451] shrink-0 mt-0.5">info</span>
+                    <span>
+                      Type this 4-digit code on {currentBooking.bayId}'s door keypad: press <strong>*</strong>, type <strong>{currentBooking.pin}</strong>, then confirm with <strong>#</strong>.
+                    </span>
+                  </div>
+                )}
+
+                {/* 30, 15, and 10 Minute Timers Reminder Strip */}
+                {currentReminderSchedule && (
+                  <div
+                    className="p-3.5 rounded-2xl flex flex-col gap-2"
+                    style={{
+                      background: '#dde8ea',
+                      boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                    }}
+                  >
+                    <div className="flex items-center justify-between gap-2">
+                      <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8aa8ab] flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[14px] text-[#fd8451]">alarm</span>
+                        Automated Pre-Wash Reminders
+                      </span>
+                      <span className="text-[10px] font-bold text-[#5a7578]">SMS & WhatsApp</span>
+                    </div>
+
+                    <div className="grid grid-cols-3 gap-2">
+                      <div
+                        className="py-1.5 px-2 rounded-xl text-center flex flex-col items-center"
+                        style={{ background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }}
+                      >
+                        <span className="text-[9px] uppercase font-bold text-[#8aa8ab]">30 Mins Before</span>
+                        <span className="text-xs font-black text-[#0b3c42] mt-0.5">{currentReminderSchedule.reminder30}</span>
+                      </div>
+
+                      <div
+                        className="py-1.5 px-2 rounded-xl text-center flex flex-col items-center"
+                        style={{ background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }}
+                      >
+                        <span className="text-[9px] uppercase font-bold text-[#8aa8ab]">15 Mins Before</span>
+                        <span className="text-xs font-black text-[#fd8451] mt-0.5">{currentReminderSchedule.reminder15}</span>
+                      </div>
+
+                      <div
+                        className="py-1.5 px-2 rounded-xl text-center flex flex-col items-center"
+                        style={{ background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }}
+                      >
+                        <span className="text-[9px] uppercase font-bold text-[#8aa8ab]">10 Mins Before</span>
+                        <span className="text-xs font-black text-[#0b3c42] mt-0.5">{currentReminderSchedule.reminder10}</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
               </section>
             ) : (
-              /* Calm Telemetry Banner when zero active bays */
+              /* No Active Booking Banner */
               <section
                 className="rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-3 animate-fadeIn"
                 style={{
@@ -460,25 +404,18 @@ export default function Dashboard() {
               >
                 <div className="flex items-center gap-3.5">
                   <div
-                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-emerald-700 shrink-0"
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-[#fd8451] shrink-0"
                     style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
                   >
-                    <span className="material-symbols-outlined text-[22px]">check_circle</span>
+                    <span className="material-symbols-outlined text-[22px]">calendar_add_on</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-extrabold text-[#0b3c42]">All Campus Machines Idle & Ready</span>
+                    <span className="text-sm font-extrabold text-[#0b3c42]">No Active Booking Scheduled</span>
                     <span className="text-xs text-[#5a7578] mt-0.5">
-                      No active wash cycles running right now across campus. All 8 spots are completely available.
+                      Select any available machine below to reserve your wash window and receive your unlock PIN.
                     </span>
                   </div>
                 </div>
-                <span
-                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold text-emerald-800 shrink-0"
-                  style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
-                >
-                  <span className="material-symbols-outlined text-[13px]">bolt</span>
-                  Zero Wait Time
-                </span>
               </section>
             )}
 
@@ -691,7 +628,7 @@ export default function Dashboard() {
                       {bookingToast.bayName} • {bookingToast.time}
                     </span>
                     <span className="text-[11px] text-[#fd8451] font-bold mt-0.5">
-                      🔔 30-min SMS reminder will be sent at {bookingToast.reminderTime}
+                      🔔 Automated SMS & WhatsApp reminders scheduled at 30m, 15m & 10m before unlock
                     </span>
                   </div>
                 </div>
@@ -924,19 +861,51 @@ export default function Dashboard() {
                         )}
                       </div>
 
-                      {/* 30-Minute Pre-Wash Reminder Notice for Upcoming Sessions */}
+                      {/* 30, 15 & 10 Minute Timers Reminder Notice for Upcoming Sessions */}
                       {isUpcoming && (
                         <div
-                          className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-semibold text-[#0b3c42] mt-1"
+                          className="p-3 rounded-2xl flex flex-col gap-2 mt-1"
                           style={{
                             background: '#dde8ea',
                             boxShadow: 'inset 1.5px 1.5px 4px #b8c6c9, inset -1.5px -1.5px 4px #ffffff',
                           }}
                         >
-                          <span className="material-symbols-outlined text-[16px] text-[#fd8451] shrink-0">alarm</span>
-                          <span>
-                            <strong>30-Min Pre-Wash Alert:</strong> Reminder scheduled for <strong>{item.reminderTime || calculateReminderTime(item.time)}</strong> (30 mins prior to wash unlock).
-                          </span>
+                          <div className="flex items-center justify-between gap-2">
+                            <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8aa8ab] flex items-center gap-1">
+                              <span className="material-symbols-outlined text-[13px] text-[#fd8451]">alarm</span>
+                              Pre-Wash Reminder Schedule (30m • 15m • 10m)
+                            </span>
+                            <span className="text-[10px] text-[#5a7578] font-bold">SMS & WhatsApp Alerts</span>
+                          </div>
+
+                          {(() => {
+                            const sched = item.reminderSchedule || calculateReminderSchedule(item.time)
+                            return (
+                              <div className="grid grid-cols-3 gap-2">
+                                <div
+                                  className="py-1 px-1.5 rounded-xl text-center flex flex-col items-center"
+                                  style={{ background: '#dde8ea', boxShadow: '2px 2px 4px #b8c6c9, -2px -2px 4px #ffffff' }}
+                                >
+                                  <span className="text-[8.5px] uppercase font-bold text-[#8aa8ab]">30m Before</span>
+                                  <span className="text-xs font-black text-[#0b3c42]">{sched.reminder30}</span>
+                                </div>
+                                <div
+                                  className="py-1 px-1.5 rounded-xl text-center flex flex-col items-center"
+                                  style={{ background: '#dde8ea', boxShadow: '2px 2px 4px #b8c6c9, -2px -2px 4px #ffffff' }}
+                                >
+                                  <span className="text-[8.5px] uppercase font-bold text-[#8aa8ab]">15m Before</span>
+                                  <span className="text-xs font-black text-[#fd8451]">{sched.reminder15}</span>
+                                </div>
+                                <div
+                                  className="py-1 px-1.5 rounded-xl text-center flex flex-col items-center"
+                                  style={{ background: '#dde8ea', boxShadow: '2px 2px 4px #b8c6c9, -2px -2px 4px #ffffff' }}
+                                >
+                                  <span className="text-[8.5px] uppercase font-bold text-[#8aa8ab]">10m Before</span>
+                                  <span className="text-xs font-black text-[#0b3c42]">{sched.reminder10}</span>
+                                </div>
+                              </div>
+                            )
+                          })()}
                         </div>
                       )}
                     </div>
