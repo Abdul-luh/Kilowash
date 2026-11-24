@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import {
   INITIAL_BAYS,
@@ -13,8 +13,23 @@ import SlotPickerModal from '../components/dashboard/SlotPickerModal'
 import GuideModal from '../components/dashboard/GuideModal'
 import ComplaintModal from '../components/dashboard/ComplaintModal'
 
+export interface ActiveBayState {
+  bookingId: string
+  bayId: string
+  bayName: string
+  location: string
+  machineName: string
+  pin: string
+  remainingSeconds: number
+  totalSeconds: number
+  isRunning: boolean
+  stage: 'Wash' | 'Rinse' | 'Spin' | 'Buffer / Unload'
+  washType: string
+  powerSource: string
+}
+
 export default function Dashboard() {
-  const [bays] = useState<Bay[]>(INITIAL_BAYS)
+  const [bays, setBays] = useState<Bay[]>(INITIAL_BAYS)
   const [selectedLocation, setSelectedLocation] = useState<string>('all')
   const [selectedBay, setSelectedBay] = useState<Bay | null>(null)
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
@@ -22,6 +37,149 @@ export default function Dashboard() {
   const [isComplaintModalOpen, setIsComplaintModalOpen] = useState(false)
   const [complaintBayId, setComplaintBayId] = useState<string>('BAY-01')
   const [complaintBookingId, setComplaintBookingId] = useState<string>('')
+
+  // Dynamic Active Bay Simulation State (Live Ticking Wash Cycle)
+  const [activeBay, setActiveBay] = useState<ActiveBayState | null>({
+    bookingId: 'BK-4108',
+    bayId: 'BAY-01',
+    bayName: 'Machine 01 (Female Hostel)',
+    location: 'Female Hostel',
+    machineName: 'Machine 01',
+    pin: '5182',
+    remainingSeconds: 22 * 60 + 36, // 22m 36s active countdown
+    totalSeconds: 30 * 60,
+    isRunning: true,
+    stage: 'Rinse',
+    washType: '30-Min Eco Cold Wash',
+    powerSource: '100% Inverter Solar',
+  })
+
+  // Dynamic cycle stage progression based on remaining seconds
+  function getCycleStage(remainingSec: number): 'Wash' | 'Rinse' | 'Spin' | 'Buffer / Unload' {
+    if (remainingSec <= 0) return 'Buffer / Unload'
+    if (remainingSec > 18 * 60) return 'Wash'
+    if (remainingSec > 8 * 60) return 'Rinse'
+    return 'Spin'
+  }
+
+  function formatTimeMMSS(totalSeconds: number): string {
+    const m = Math.floor(totalSeconds / 60)
+    const s = totalSeconds % 60
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`
+  }
+
+  // Live ticking countdown for active bay
+  useEffect(() => {
+    if (!activeBay || !activeBay.isRunning || activeBay.remainingSeconds <= 0) return
+
+    const interval = setInterval(() => {
+      setActiveBay(prev => {
+        if (!prev || !prev.isRunning) return prev
+        const nextRemaining = Math.max(0, prev.remainingSeconds - 1)
+        const nextStage = getCycleStage(nextRemaining)
+        return {
+          ...prev,
+          remainingSeconds: nextRemaining,
+          isRunning: nextRemaining > 0,
+          stage: nextStage,
+        }
+      })
+    }, 1000)
+
+    return () => clearInterval(interval)
+  }, [activeBay?.isRunning, activeBay?.remainingSeconds])
+
+  // Synchronize campus machines status with dynamic active bay
+  useEffect(() => {
+    if (!activeBay) return
+    setBays(prev =>
+      prev.map(bay => {
+        if (bay.id === activeBay.bayId) {
+          if (activeBay.remainingSeconds > 0) {
+            const remMin = Math.ceil(activeBay.remainingSeconds / 60)
+            return {
+              ...bay,
+              status: 'busy',
+              statusLabel: `Busy (${remMin}m)`,
+              remainingMinutes: remMin,
+            }
+          } else {
+            return {
+              ...bay,
+              status: 'buffer',
+              statusLabel: 'Buffer (Unload)',
+              remainingMinutes: 0,
+            }
+          }
+        }
+        return bay
+      })
+    )
+  }, [activeBay?.remainingSeconds, activeBay?.bayId])
+
+  // Controls for dynamic active bay
+  function togglePauseActiveCycle() {
+    setActiveBay(prev => (prev ? { ...prev, isRunning: !prev.isRunning } : null))
+  }
+
+  function fastForwardActiveCycle() {
+    setActiveBay(prev => {
+      if (!prev) return null
+      const nextRemaining = Math.max(0, prev.remainingSeconds - 120)
+      return {
+        ...prev,
+        remainingSeconds: nextRemaining,
+        isRunning: nextRemaining > 0,
+        stage: getCycleStage(nextRemaining),
+      }
+    })
+  }
+
+  function handleCompleteAndUnload() {
+    if (!activeBay) return
+    const completedBayId = activeBay.bayId
+    // Revert machine to available
+    setBays(prev =>
+      prev.map(b =>
+        b.id === completedBayId
+          ? {
+              ...b,
+              status: 'available',
+              statusLabel: 'Available',
+              remainingMinutes: undefined,
+            }
+          : b
+      )
+    )
+    // Update history
+    setHistory(prev =>
+      prev.map(h => (h.id === activeBay.bookingId ? { ...h, status: 'Completed' } : h))
+    )
+    setActiveBay(null)
+  }
+
+  function handleStartWash(booking: WashHistoryItem) {
+    const bay = bays.find(b => b.id === booking.bayId)
+    setActiveBay({
+      bookingId: booking.id,
+      bayId: booking.bayId,
+      bayName: booking.bayName,
+      location: bay ? bay.name : 'Campus Hostel',
+      machineName: bay ? bay.subname : 'Machine',
+      pin: booking.pin,
+      remainingSeconds: 30 * 60,
+      totalSeconds: 30 * 60,
+      isRunning: true,
+      stage: 'Wash',
+      washType: '30-Min Eco Cold Wash',
+      powerSource: '100% Inverter Solar',
+    })
+    setHistory(prev =>
+      prev.map(h => (h.id === booking.id ? { ...h, status: 'Active' } : h))
+    )
+    setActiveTab('bays')
+    window.scrollTo({ top: 0, behavior: 'smooth' })
+  }
 
   // Current active navigation tab: 'bays' | 'history' | 'guide'
   const [activeTab, setActiveTab] = useState<'bays' | 'history' | 'guide'>('bays')
@@ -220,12 +378,383 @@ export default function Dashboard() {
       <main className="flex-1 w-full max-w-4xl mx-auto px-4 sm:px-6 pt-24 pb-28 flex flex-col gap-6">
 
         {/* ============================================================== */}
-        {/* VIEW 1: BAYS OVERVIEW & USER'S CURRENT BOOKING */}
+        {/* VIEW 1: BAYS OVERVIEW & DYNAMIC ACTIVE BAY */}
         {/* ============================================================== */}
         {activeTab === 'bays' && (
           <>
-            {/* User's Current Booking Information Hero Card */}
-            {currentBooking ? (
+            {/* Dynamic Active Bay Hero Card (Live Wash Cycle Simulation) */}
+            {activeBay ? (
+              <section
+                className="relative rounded-3xl p-5 sm:p-6 flex flex-col gap-4 overflow-hidden animate-fadeIn"
+                style={{
+                  background: '#dde8ea',
+                  boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
+                }}
+              >
+                {/* Top status strip */}
+                <div className="flex items-center justify-between gap-2 flex-wrap">
+                  <div
+                    className="inline-flex items-center gap-2 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
+                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                  >
+                    <span className="relative flex h-2.5 w-2.5">
+                      {activeBay.isRunning && activeBay.remainingSeconds > 0 && (
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                      )}
+                      <span
+                        className={`relative inline-flex rounded-full h-2.5 w-2.5 ${
+                          activeBay.remainingSeconds <= 0
+                            ? 'bg-purple-500'
+                            : activeBay.isRunning
+                            ? 'bg-emerald-500'
+                            : 'bg-amber-500'
+                        }`}
+                      ></span>
+                    </span>
+                    <span>Dynamic Active Bay • {activeBay.bayId}</span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-[10px] font-extrabold uppercase tracking-wider ${
+                        activeBay.stage === 'Wash'
+                          ? 'text-[#fd8451]'
+                          : activeBay.stage === 'Rinse'
+                          ? 'text-sky-700'
+                          : activeBay.stage === 'Spin'
+                          ? 'text-emerald-700'
+                          : 'text-purple-700'
+                      }`}
+                      style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                    >
+                      <span className="material-symbols-outlined text-[13px]">
+                        {activeBay.stage === 'Wash'
+                          ? 'local_laundry_service'
+                          : activeBay.stage === 'Rinse'
+                          ? 'water_drop'
+                          : activeBay.stage === 'Spin'
+                          ? 'cyclone'
+                          : 'door_open'}
+                      </span>
+                      <span>Stage: {activeBay.stage}</span>
+                    </span>
+
+                    <span
+                      className="hidden sm:inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-bold text-[#5a7578]"
+                      style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
+                    >
+                      <span className="material-symbols-outlined text-[12px] text-[#fd8451]">solar_power</span>
+                      <span>Solar Inverter</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Machine Graphic & Dynamic Circular Countdown Ring */}
+                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                  <div className="flex items-center gap-4">
+                    {/* SVG Circular Progress Ring */}
+                    <div
+                      className="relative w-20 h-20 sm:w-24 sm:h-24 rounded-2xl flex items-center justify-center shrink-0"
+                      style={{
+                        background: '#dde8ea',
+                        boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
+                      }}
+                    >
+                      <svg className="absolute inset-0 w-full h-full -rotate-90 p-1" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="42" fill="none" stroke="#c8d7d9" strokeWidth="6" />
+                        <circle
+                          cx="50"
+                          cy="50"
+                          r="42"
+                          fill="none"
+                          stroke={
+                            activeBay.remainingSeconds <= 0
+                              ? '#9333ea'
+                              : activeBay.stage === 'Wash'
+                              ? '#fd8451'
+                              : activeBay.stage === 'Rinse'
+                              ? '#0284c7'
+                              : '#10b981'
+                          }
+                          strokeWidth="6"
+                          strokeDasharray={264}
+                          strokeDashoffset={
+                            activeBay.totalSeconds > 0
+                              ? 264 * (1 - activeBay.remainingSeconds / activeBay.totalSeconds)
+                              : 0
+                          }
+                          strokeLinecap="round"
+                          className="transition-all duration-1000 ease-linear"
+                        />
+                      </svg>
+                      <img
+                        src={machineImg}
+                        alt={activeBay.bayName}
+                        className="w-10 h-10 sm:w-12 sm:h-12 object-contain relative z-10 drop-shadow-[0_4px_8px_rgba(11,60,66,0.18)]"
+                      />
+                    </div>
+
+                    <div className="flex flex-col min-w-0">
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#8aa8ab]">
+                        Active In-Use Machine
+                      </span>
+                      <h3 className="text-base sm:text-lg font-extrabold text-[#0b3c42] tracking-tight">
+                        {activeBay.bayName}
+                      </h3>
+                      <div className="flex items-center gap-1.5 mt-0.5 text-xs font-semibold text-[#5a7578] flex-wrap">
+                        <span className="text-[#0b3c42] font-bold">{activeBay.location}</span>
+                        <span>•</span>
+                        <span>{activeBay.washType}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Big Live Ticking Clock */}
+                  <div
+                    className="w-full sm:w-auto px-4 py-2.5 rounded-2xl flex flex-row sm:flex-col items-center justify-between sm:justify-center text-right shrink-0"
+                    style={{
+                      background: '#dde8ea',
+                      boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                    }}
+                  >
+                    <div className="flex flex-col text-left sm:text-right">
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-[#8aa8ab]">
+                        {activeBay.remainingSeconds <= 0
+                          ? 'Cycle Complete'
+                          : activeBay.isRunning
+                          ? 'Remaining (Live Ticking)'
+                          : 'Cycle Paused'}
+                      </span>
+                      <span className="text-2xl sm:text-3xl font-black tracking-tight text-[#0b3c42] tabular-nums">
+                        {formatTimeMMSS(activeBay.remainingSeconds)}
+                      </span>
+                    </div>
+
+                    <span className="text-[10px] font-bold text-[#5a7578] sm:mt-0.5">
+                      of {formatTimeMMSS(activeBay.totalSeconds)}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Stage Progression Stepper */}
+                <div
+                  className="p-3 rounded-2xl flex flex-col gap-2"
+                  style={{
+                    background: '#dde8ea',
+                    boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                  }}
+                >
+                  <div className="flex items-center justify-between text-[10px] font-bold text-[#8aa8ab] uppercase tracking-wider px-1">
+                    <span>Cycle Progress Steps</span>
+                    <span className="text-[#0b3c42] font-extrabold">{activeBay.stage} Phase</span>
+                  </div>
+
+                  <div className="grid grid-cols-4 gap-1.5">
+                    {/* Step 1: Wash */}
+                    <div
+                      className={`p-2 rounded-xl text-center flex flex-col items-center transition-all ${
+                        activeBay.stage === 'Wash'
+                          ? 'bg-[#fd8451] text-white shadow-md'
+                          : activeBay.remainingSeconds <= 18 * 60
+                          ? 'text-emerald-800 font-bold'
+                          : 'text-[#8aa8ab]'
+                      }`}
+                      style={
+                        activeBay.stage !== 'Wash'
+                          ? { background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }
+                          : undefined
+                      }
+                    >
+                      <span className="text-[9px] uppercase font-bold">1. Wash</span>
+                      <span className="text-[10px] mt-0.5 font-extrabold">12 mins</span>
+                    </div>
+
+                    {/* Step 2: Rinse */}
+                    <div
+                      className={`p-2 rounded-xl text-center flex flex-col items-center transition-all ${
+                        activeBay.stage === 'Rinse'
+                          ? 'bg-sky-600 text-white shadow-md'
+                          : activeBay.remainingSeconds <= 8 * 60
+                          ? 'text-emerald-800 font-bold'
+                          : 'text-[#8aa8ab]'
+                      }`}
+                      style={
+                        activeBay.stage !== 'Rinse'
+                          ? { background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }
+                          : undefined
+                      }
+                    >
+                      <span className="text-[9px] uppercase font-bold">2. Rinse</span>
+                      <span className="text-[10px] mt-0.5 font-extrabold">10 mins</span>
+                    </div>
+
+                    {/* Step 3: Spin */}
+                    <div
+                      className={`p-2 rounded-xl text-center flex flex-col items-center transition-all ${
+                        activeBay.stage === 'Spin'
+                          ? 'bg-emerald-600 text-white shadow-md'
+                          : activeBay.remainingSeconds <= 0
+                          ? 'text-emerald-800 font-bold'
+                          : 'text-[#8aa8ab]'
+                      }`}
+                      style={
+                        activeBay.stage !== 'Spin'
+                          ? { background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }
+                          : undefined
+                      }
+                    >
+                      <span className="text-[9px] uppercase font-bold">3. Spin</span>
+                      <span className="text-[10px] mt-0.5 font-extrabold">8 mins</span>
+                    </div>
+
+                    {/* Step 4: Buffer / Unload */}
+                    <div
+                      className={`p-2 rounded-xl text-center flex flex-col items-center transition-all ${
+                        activeBay.stage === 'Buffer / Unload'
+                          ? 'bg-purple-600 text-white shadow-md'
+                          : 'text-[#8aa8ab]'
+                      }`}
+                      style={
+                        activeBay.stage !== 'Buffer / Unload'
+                          ? { background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }
+                          : undefined
+                      }
+                    >
+                      <span className="text-[9px] uppercase font-bold">4. Unload</span>
+                      <span className="text-[10px] mt-0.5 font-extrabold">10m buffer</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Keypad PIN Display & Copy Button */}
+                <div
+                  className="w-full rounded-2xl p-3.5 sm:p-4 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3"
+                  style={{
+                    background: '#0b3c42',
+                    boxShadow: 'inset 3px 3px 8px rgba(0,0,0,0.5), inset -2px -2px 6px rgba(255,255,255,0.1)',
+                  }}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center shrink-0">
+                      <span className="material-symbols-outlined text-[#fd8451] text-[22px]">pin</span>
+                    </div>
+                    <div className="flex flex-col">
+                      <span className="text-[9px] uppercase font-bold tracking-wider text-[#a2ced5]">
+                        {activeBay.bayId} Keypad Unlock PIN
+                      </span>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-2xl sm:text-3xl font-black tracking-widest text-white tabular-nums">
+                          {activeBay.pin}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-full bg-white/10 text-[#fd8451] text-[9px] uppercase font-bold tracking-wider flex items-center gap-1">
+                          <span className="material-symbols-outlined text-[11px]">key</span>
+                          Single Use
+                        </span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => handleCopyPin(activeBay.pin, activeBay.bookingId)}
+                      className="flex-1 sm:flex-initial px-4 py-2 rounded-full bg-white/15 hover:bg-white/25 active:scale-95 transition-all text-xs font-bold flex items-center justify-center gap-1.5 text-white"
+                      style={{ boxShadow: '0 2px 6px rgba(0,0,0,0.2)' }}
+                    >
+                      <span className="material-symbols-outlined text-[15px]">
+                        {copiedPinId === activeBay.bookingId ? 'check' : 'content_copy'}
+                      </span>
+                      <span>{copiedPinId === activeBay.bookingId ? 'PIN Copied!' : 'Copy PIN'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => setExpandedPinHelp(!expandedPinHelp)}
+                      className="p-2 rounded-full bg-white/10 hover:bg-white/20 active:scale-95 text-white transition-all flex items-center justify-center"
+                      title="Keypad unlock instructions"
+                    >
+                      <span className="material-symbols-outlined text-[18px]">help_outline</span>
+                    </button>
+                  </div>
+                </div>
+
+                {expandedPinHelp && (
+                  <div
+                    className="p-3 rounded-xl text-xs text-[#0b3c42] flex items-start gap-2 animate-fadeIn"
+                    style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+                  >
+                    <span className="material-symbols-outlined text-[18px] text-[#fd8451] shrink-0 mt-0.5">info</span>
+                    <span>
+                      Type this 4-digit code on {activeBay.bayId}'s door keypad: press <strong>*</strong>, type <strong>{activeBay.pin}</strong>, then confirm with <strong>#</strong>.
+                    </span>
+                  </div>
+                )}
+
+                {/* Interactive Dynamic Bay Controls Bar */}
+                <div className="flex items-center justify-between gap-2 pt-1 flex-wrap">
+                  {activeBay.remainingSeconds > 0 ? (
+                    <>
+                      <div className="flex items-center gap-2 flex-1 sm:flex-initial">
+                        <button
+                          type="button"
+                          onClick={togglePauseActiveCycle}
+                          className="px-3.5 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-[#0b3c42] active:scale-95"
+                          style={{
+                            background: '#dde8ea',
+                            boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff',
+                          }}
+                        >
+                          <span className="material-symbols-outlined text-[16px] text-[#fd8451]">
+                            {activeBay.isRunning ? 'pause' : 'play_arrow'}
+                          </span>
+                          <span>{activeBay.isRunning ? 'Pause Cycle' : 'Resume'}</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={fastForwardActiveCycle}
+                          className="px-3 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all text-[#5a7578] hover:text-[#0b3c42] active:scale-95"
+                          style={{
+                            background: '#dde8ea',
+                            boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff',
+                          }}
+                          title="Advance cycle by 2 minutes for testing"
+                        >
+                          <span className="material-symbols-outlined text-[15px]">fast_forward</span>
+                          <span>-2m Sim</span>
+                        </button>
+                      </div>
+
+                      <button
+                        type="button"
+                        onClick={handleCompleteAndUnload}
+                        className="px-4 py-2 rounded-full text-xs font-bold flex items-center gap-1.5 text-rose-700 hover:text-rose-800 transition-all active:scale-95 ml-auto"
+                        style={{
+                          background: '#dde8ea',
+                          boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff',
+                        }}
+                      >
+                        <span className="material-symbols-outlined text-[16px]">stop_circle</span>
+                        <span>Complete & Free Bay</span>
+                      </button>
+                    </>
+                  ) : (
+                    /* Cycle Complete / 10m Buffer Window State */
+                    <button
+                      type="button"
+                      onClick={handleCompleteAndUnload}
+                      className="w-full py-3 px-4 rounded-full text-xs font-extrabold text-white flex items-center justify-center gap-2 transition-all active:scale-98 animate-bounce"
+                      style={{
+                        background: '#0b3c42',
+                        boxShadow: '4px 4px 14px rgba(11,60,66,0.4), -2px -2px 6px #ffffff',
+                      }}
+                    >
+                      <span className="material-symbols-outlined text-[18px] text-[#fd8451]">door_open</span>
+                      <span>Cycle Finished • Open Door & Retrieve Laundry (10-Min Buffer)</span>
+                    </button>
+                  )}
+                </div>
+              </section>
+            ) : currentBooking ? (
+              /* User's Upcoming Reserved Booking (No active wash running yet) */
               <section
                 className="relative rounded-3xl p-5 sm:p-6 flex flex-col gap-4 overflow-hidden animate-fadeIn"
                 style={{
@@ -392,9 +921,23 @@ export default function Dashboard() {
                     </div>
                   </div>
                 )}
+
+                {/* Action to Start Wash Directly */}
+                <button
+                  type="button"
+                  onClick={() => handleStartWash(currentBooking)}
+                  className="w-full py-3.5 px-4 rounded-full flex items-center justify-center gap-2 font-extrabold text-white text-xs transition-all active:scale-98"
+                  style={{
+                    background: '#fd8451',
+                    boxShadow: '4px 4px 14px rgba(253,132,81,0.45), -2px -2px 6px rgba(255,255,255,0.6)',
+                  }}
+                >
+                  <span className="material-symbols-outlined text-[18px]">play_circle</span>
+                  <span>Punch Keypad PIN & Start Dynamic Wash Cycle</span>
+                </button>
               </section>
             ) : (
-              /* No Active Booking Banner */
+              /* Calm Idle Banner */
               <section
                 className="rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-3 animate-fadeIn"
                 style={{
@@ -410,7 +953,7 @@ export default function Dashboard() {
                     <span className="material-symbols-outlined text-[22px]">calendar_add_on</span>
                   </div>
                   <div className="flex flex-col">
-                    <span className="text-sm font-extrabold text-[#0b3c42]">No Active Booking Scheduled</span>
+                    <span className="text-sm font-extrabold text-[#0b3c42]">All Campus Machines Idle & Ready</span>
                     <span className="text-xs text-[#5a7578] mt-0.5">
                       Select any available machine below to reserve your wash window and receive your unlock PIN.
                     </span>
@@ -906,6 +1449,20 @@ export default function Dashboard() {
                               </div>
                             )
                           })()}
+
+                          {/* Quick Action to Trigger Dynamic Wash from History */}
+                          <button
+                            type="button"
+                            onClick={() => handleStartWash(item)}
+                            className="w-full py-2.5 px-3 rounded-full flex items-center justify-center gap-2 font-bold text-white text-xs transition-all active:scale-98 mt-1"
+                            style={{
+                              background: '#fd8451',
+                              boxShadow: '3px 3px 8px rgba(253,132,81,0.4), -1px -1px 4px rgba(255,255,255,0.5)',
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[16px]">play_circle</span>
+                            <span>Punch Keypad PIN & Start Wash in Active Bay</span>
+                          </button>
                         </div>
                       )}
                     </div>
