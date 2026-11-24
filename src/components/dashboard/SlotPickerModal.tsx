@@ -125,14 +125,6 @@ export default function SlotPickerModal({
 
   if (!isOpen) return null
 
-  // Date formatted strings
-  const formattedSelectedDate = selectedDate.toLocaleDateString('en-GB', {
-    weekday: 'long',
-    day: 'numeric',
-    month: 'long',
-    year: 'numeric',
-  })
-
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-[#0b3c42]/50 backdrop-blur-sm animate-fadeIn">
       <div
@@ -153,7 +145,7 @@ export default function SlotPickerModal({
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
               >
                 <span className="material-symbols-outlined text-[14px]">calendar_month</span>
-                <span>Schedule Calendar</span>
+                <span>Schedule Time</span>
               </span>
               <span className="text-xs text-[#5a7578] font-semibold">{bay.hall}</span>
             </div>
@@ -182,21 +174,12 @@ export default function SlotPickerModal({
             boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
           }}
         >
-          {/* Month / Date Banner with Next Day Buttons */}
+          {/* Date Selector Header with Next Day Buttons */}
           <div className="flex items-center justify-between gap-2">
-            <div>
-              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8aa8ab]">
-                Select Booking Date
-              </span>
-              <h3 className="text-sm sm:text-base font-extrabold text-[#0b3c42] leading-tight">
-                {formattedSelectedDate}
-                {isDateToday && (
-                  <span className="ml-2 px-2 py-0.5 rounded-full bg-[#0b3c42] text-white text-[10px] font-bold uppercase tracking-wider">
-                    Today
-                  </span>
-                )}
-              </h3>
-            </div>
+            <span className="text-xs font-extrabold uppercase tracking-wider text-[#0b3c42] flex items-center gap-1.5">
+              <span className="material-symbols-outlined text-[16px] text-[#fd8451]">event</span>
+              Select Date
+            </span>
 
             {/* Next / Previous Day Buttons */}
             <div className="flex items-center gap-1.5 shrink-0">
@@ -370,9 +353,8 @@ export default function SlotPickerModal({
               const isBooked = slot.isBooked
               const isAvailable = slot.isAvailable
 
-              // Determine daylight / power state for slot
+              // Determine peak solar window
               const isPeakSolar = slot.hour24 >= 11 && slot.hour24 <= 15
-              const isNight = slot.hour24 >= 20 || slot.hour24 < 6
 
               return (
                 <div
@@ -402,8 +384,8 @@ export default function SlotPickerModal({
                         }
                   }
                 >
-                  {/* Left: Checkbox Icon & Time Range */}
-                  <div className="flex items-center gap-2 min-w-0">
+                  {/* Left: Checkbox Icon & Full Time Schedule Display */}
+                  <div className="flex items-center gap-2 min-w-0 flex-1">
                     {/* Checkbox indicator */}
                     <div
                       className={`w-5 h-5 rounded-md flex items-center justify-center shrink-0 transition-colors ${
@@ -427,27 +409,18 @@ export default function SlotPickerModal({
                       </span>
                     </div>
 
-                    {/* Time Text */}
-                    <div className="flex flex-col min-w-0">
-                      <span
-                        className={`text-[11px] sm:text-xs font-black tracking-tight leading-tight tabular-nums truncate ${
-                          isSelected ? 'text-white' : 'text-[#0b3c42]'
-                        }`}
-                      >
-                        {slot.startTime}
-                      </span>
-                      <span
-                        className={`text-[9px] leading-tight truncate ${
-                          isSelected ? 'text-[#a2ced5]' : 'text-[#5a7578]'
-                        }`}
-                      >
-                        to {slot.endTime}
-                      </span>
-                    </div>
+                    {/* Full Time Schedule Display */}
+                    <span
+                      className={`text-[11px] sm:text-xs font-black tracking-tight leading-none tabular-nums truncate ${
+                        isSelected ? 'text-white' : 'text-[#0b3c42]'
+                      }`}
+                    >
+                      {slot.timeLabel}
+                    </span>
                   </div>
 
-                  {/* Right: Status Pill or Rate */}
-                  <div className="flex flex-col items-end shrink-0">
+                  {/* Right: Status Pill for Booked / Selected / Peak Solar (No redundant price) */}
+                  <div className="flex items-center shrink-0">
                     {isBooked ? (
                       <span className="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-800">
                         Booked
@@ -456,39 +429,20 @@ export default function SlotPickerModal({
                       <span className="text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase bg-[#fd8451] text-white">
                         Selected
                       </span>
-                    ) : (
-                      <div className="flex items-center gap-1">
-                        {isPeakSolar && (
-                          <span
-                            className="text-[8px] font-bold px-1 py-0.5 rounded-full uppercase text-[#fd8451] flex items-center"
-                            style={{
-                              background: '#dde8ea',
-                              boxShadow:
-                                'inset 1px 1px 2px #b8c6c9, inset -1px -1px 2px #ffffff',
-                            }}
-                            title="Peak Solar Window"
-                          >
-                            <span className="material-symbols-outlined text-[10px]">sunny</span>
-                          </span>
-                        )}
-                        {isNight && (
-                          <span
-                            className="text-[8px] font-bold px-1 py-0.5 rounded-full uppercase text-[#5a7578] flex items-center"
-                            style={{
-                              background: '#dde8ea',
-                              boxShadow:
-                                'inset 1px 1px 2px #b8c6c9, inset -1px -1px 2px #ffffff',
-                            }}
-                            title="100% Inverter Buffer"
-                          >
-                            <span className="material-symbols-outlined text-[10px]">bedtime</span>
-                          </span>
-                        )}
-                        <span className="text-[11px] sm:text-xs font-extrabold text-[#fd8451]">
-                          ₦{bay.rate.toLocaleString()}
-                        </span>
-                      </div>
-                    )}
+                    ) : isPeakSolar ? (
+                      <span
+                        className="text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase text-[#fd8451] flex items-center gap-0.5"
+                        style={{
+                          background: '#dde8ea',
+                          boxShadow:
+                            'inset 1px 1px 2px #b8c6c9, inset -1px -1px 2px #ffffff',
+                        }}
+                        title="Peak Solar Window"
+                      >
+                        <span className="material-symbols-outlined text-[10px]">sunny</span>
+                        <span>Solar</span>
+                      </span>
+                    ) : null}
                   </div>
                 </div>
               )

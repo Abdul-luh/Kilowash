@@ -61,8 +61,8 @@ export const INITIAL_BAYS: Bay[] = [
   {
     id: 'BAY-01',
     name: 'Bay Node 01',
-    subname: 'Inverter Master A',
-    hall: 'Hostel Block C & D Laundry Corridor',
+    subname: 'Machine 01',
+    hall: 'Front block to middle block',
     capacity: '10kg Drum • Clean & Primed',
     type: 'standard',
     status: 'available',
@@ -76,8 +76,8 @@ export const INITIAL_BAYS: Bay[] = [
   {
     id: 'BAY-02',
     name: 'Bay Node 02',
-    subname: 'Inverter Master B',
-    hall: 'Hostel Block C & D Laundry Corridor',
+    subname: 'Machine 02',
+    hall: 'Front block to middle block',
     capacity: '10kg Drum • Active Spin Cycle',
     type: 'standard',
     status: 'busy',
@@ -170,7 +170,7 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   {
     id: 'BK-9482',
     bayId: 'BAY-01',
-    bayName: 'Inverter Master A',
+    bayName: 'Machine 01',
     date: 'Today, 22 Nov',
     time: '01:00 PM – 01:30 PM',
     pin: '7394',
@@ -180,7 +180,7 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   {
     id: 'BK-8291',
     bayId: 'BAY-01',
-    bayName: 'Inverter Master A',
+    bayName: 'Machine 01',
     date: '18 Nov 2026',
     time: '04:00 PM – 04:30 PM',
     pin: '4829',
@@ -190,7 +190,7 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   {
     id: 'BK-7104',
     bayId: 'BAY-02',
-    bayName: 'Inverter Master B',
+    bayName: 'Machine 02',
     date: '14 Nov 2026',
     time: '11:00 AM – 11:30 AM',
     pin: '2105',

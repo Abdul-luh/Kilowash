@@ -175,10 +175,10 @@ export default function ComplaintModal({
                 <span className="text-[#8aa8ab] font-bold uppercase text-[10px]">Location</span>
                 <span className="font-extrabold text-[#0b3c42]">
                   {submittedTicket.bay === 'BAY-01'
-                    ? 'Bay 01 (Inverter Master A)'
+                    ? 'Bay 01 (Machine 01)'
                     : submittedTicket.bay === 'BAY-02'
-                    ? 'Bay 02 (Inverter Master B)'
-                    : 'Corridor Laundry Area'}
+                    ? 'Bay 02 (Machine 02)'
+                    : 'Front block to middle block'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -318,9 +318,9 @@ export default function ComplaintModal({
                 }}
               >
                 {[
-                  { id: 'BAY-01', label: 'Bay 01 (Master A)' },
-                  { id: 'BAY-02', label: 'Bay 02 (Master B)' },
-                  { id: 'ALL', label: 'General / Area' },
+                  { id: 'BAY-01', label: 'Bay 01 (Machine 01)' },
+                  { id: 'BAY-02', label: 'Bay 02 (Machine 02)' },
+                  { id: 'ALL', label: 'All Machines' },
                 ].map(item => (
                   <button
                     key={item.id}

@@ -174,7 +174,7 @@ export default function Dashboard() {
             style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
           >
             <span className="material-symbols-outlined text-[14px] text-[#fd8451]">location_on</span>
-            <span>LASU Epe Hostel Corridor</span>
+            <span>Front block to middle block</span>
           </div>
         </div>
 
@@ -421,7 +421,7 @@ export default function Dashboard() {
                     Hostel Bay A
                   </span>
                 </div>
-                <p className="text-xs text-[#5a7578] mt-0.5">Hostel Block C & D Corridor</p>
+                <p className="text-xs text-[#5a7578] mt-0.5">Front block to middle block</p>
               </div>
 
               <div
@@ -516,7 +516,7 @@ export default function Dashboard() {
                         }}
                       >
                         <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
-                        <span>Book {bay.id} (Schedule Calendar)</span>
+                        <span>Book {bay.id} (Schedule Time)</span>
                       </button>
                     ) : (
                       <button
