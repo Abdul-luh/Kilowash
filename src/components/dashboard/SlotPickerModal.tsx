@@ -131,7 +131,7 @@ export default function SlotPickerModal({
         className="w-full max-w-4xl rounded-3xl p-4 sm:p-7 flex flex-col gap-4 relative max-h-[92vh] overflow-y-auto"
         style={{
           background: '#dde8ea',
-          boxShadow: '16px 16px 36px #b0bec0, -16px -16px 36px #ffffff',
+          boxShadow: 'inset 6px 6px 18px #b0bec0, inset -6px -6px 18px #ffffff',
         }}
       >
         {/* ============================================================== */}

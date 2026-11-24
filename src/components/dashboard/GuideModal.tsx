@@ -39,7 +39,7 @@ export default function GuideModal({ isOpen, onClose }: GuideModalProps) {
         className="w-full max-w-lg rounded-3xl p-5 sm:p-7 flex flex-col gap-5 relative max-h-[90vh] overflow-y-auto"
         style={{
           background: '#dde8ea',
-          boxShadow: '16px 16px 36px #b0bec0, -16px -16px 36px #ffffff',
+          boxShadow: 'inset 6px 6px 18px #b0bec0, inset -6px -6px 18px #ffffff',
         }}
       >
         <div className="flex items-center justify-between border-b border-[#b8c6c9]/40 pb-3">
