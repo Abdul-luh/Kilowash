@@ -4,8 +4,8 @@ import {
   INITIAL_BAYS,
   MOCK_HISTORY,
   machineImg,
-  pinImg,
-  foldedShirtsImg,
+  // pinImg,
+  // foldedShirtsImg,
   type Bay,
   type BookingSlot,
   type ActiveCycle,
@@ -44,8 +44,8 @@ export default function Dashboard() {
   const [history, setHistory] = useState<WashHistoryItem[]>(MOCK_HISTORY)
 
   // Copy feedback state
-  const [copiedPin, setCopiedPin] = useState(false)
-  const [showPinHelp, setShowPinHelp] = useState(false)
+  const [copiedPinId, setCopiedPinId] = useState<string | null>(null)
+  // const [showPinHelp, setShowPinHelp] = useState(false)
 
   // Active countdown timer effect
   useEffect(() => {
@@ -71,18 +71,22 @@ export default function Dashboard() {
     return () => clearInterval(interval)
   }, [activeCycle])
 
+  /*
   function formatTime(totalSec: number) {
     const mins = Math.floor(totalSec / 60)
     const secs = totalSec % 60
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
   }
+  */
 
-  function handleCopyPin(pinToCopy: string) {
+  function handleCopyPin(pinToCopy: string, bookingId?: string) {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(pinToCopy)
     }
-    setCopiedPin(true)
-    setTimeout(() => setCopiedPin(false), 2000)
+    if (bookingId) {
+      setCopiedPinId(bookingId)
+      setTimeout(() => setCopiedPinId(null), 2000)
+    }
   }
 
   function handleOpenSlotPicker(bay: Bay) {
@@ -128,12 +132,14 @@ export default function Dashboard() {
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
+  /*
   // Calculate circular SVG progress offset
   const circumference = 264
   const progressRatio = activeCycle
     ? activeCycle.remainingSeconds / activeCycle.totalSeconds
     : 0
   const strokeDashoffset = circumference * (1 - progressRatio)
+  */
 
   return (
     <div
@@ -174,7 +180,7 @@ export default function Dashboard() {
             style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
           >
             <span className="material-symbols-outlined text-[14px] text-[#fd8451]">location_on</span>
-            <span>Front block to middle block</span>
+            <span>4 Campus Locations</span>
           </div>
         </div>
 
@@ -234,7 +240,8 @@ export default function Dashboard() {
         {/* ============================================================== */}
         {activeTab === 'bays' && (
           <>
-            {/* Active Wash & Keypad PIN Hero Card — Tactile Claymorphic with Inset Cloth Depth Shapes */}
+            {/* Active Wash & Keypad PIN Hero Card — temporarily commented out per request */}
+            {/*
             {activeCycle && (
               <section
                 className="relative w-full rounded-3xl p-5 sm:p-7 overflow-hidden flex flex-col gap-5 animate-fadeIn"
@@ -243,9 +250,7 @@ export default function Dashboard() {
                   boxShadow: '10px 10px 24px #b0bec0, -10px -10px 24px #ffffff',
                 }}
               >
-                {/* Inset Depth Background with Pin Image Motif */}
                 <div className="absolute inset-0 pointer-events-none select-none overflow-hidden" aria-hidden>
-                  {/* Pin Image in place of folded Ts and circle */}
                   <img
                     src={pinImg}
                     alt=""
@@ -254,7 +259,6 @@ export default function Dashboard() {
                     style={{ filter: 'drop-shadow(3px 6px 10px rgba(11,60,66,0.18))' }}
                   />
 
-                  {/* Secondary folded cloth shape lower left */}
                   <img
                     src={foldedShirtsImg}
                     alt=""
@@ -263,7 +267,6 @@ export default function Dashboard() {
                     style={{ filter: 'drop-shadow(2px 4px 6px rgba(11,60,66,0.1))' }}
                   />
 
-                  {/* Inset curved stitch line */}
                   <div
                     className="absolute bottom-2 right-12 w-32 h-16 rounded-full"
                     style={{
@@ -274,7 +277,6 @@ export default function Dashboard() {
                   />
                 </div>
 
-                {/* Top tags with clear icons */}
                 <div className="flex items-center justify-between gap-2 relative z-10">
                   <div
                     className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-extrabold uppercase tracking-wider text-[#0b3c42]"
@@ -293,9 +295,7 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Center Visual & Countdown */}
                 <div className="flex items-center gap-4 sm:gap-6 pt-1 relative z-10">
-                  {/* Recessed well with washer image and SVG progress ring */}
                   <div
                     className="relative shrink-0 w-24 h-24 sm:w-28 sm:h-28 rounded-2xl p-2 flex items-center justify-center"
                     style={{
@@ -321,7 +321,6 @@ export default function Dashboard() {
                     />
                   </div>
 
-                  {/* Telemetry info */}
                   <div className="flex flex-col min-w-0 flex-1">
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#8aa8ab] flex items-center gap-1">
                       <span className="material-symbols-outlined text-[14px] text-[#5a7578]">schedule</span>
@@ -344,7 +343,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Keypad PIN Security Well */}
                 <div
                   className="w-full rounded-2xl p-4 text-white flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 relative z-10"
                   style={{
@@ -407,29 +405,30 @@ export default function Dashboard() {
                 )}
               </section>
             )}
+            */}
 
             {/* Bays Header */}
-            <div className="flex items-center justify-between gap-2 px-1 pt-2">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1 pt-2">
               <div>
-                <div className="flex items-center gap-2">
-                  <h2 className="text-lg sm:text-xl font-extrabold text-[#0b3c42]">Campus Washing Bays</h2>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h2 className="text-lg sm:text-xl font-extrabold text-[#0b3c42]">Campus Washing Spots</h2>
                   <span
                     className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold text-[#0b3c42] uppercase flex items-center gap-1"
                     style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
                   >
-                    <span className="material-symbols-outlined text-[12px] text-[#0b3c42]">apartment</span>
-                    Hostel Bay A
+                    <span className="material-symbols-outlined text-[12px] text-[#fd8451]">apartment</span>
+                    4 Locations
                   </span>
                 </div>
-                <p className="text-xs text-[#5a7578] mt-0.5">Front block to middle block</p>
+                <p className="text-xs text-[#5a7578] mt-0.5">Female Hostel • Front-Middle Block • PDS Male Hostel • PDS Female Hostel</p>
               </div>
 
               <div
-                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42]"
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] self-start sm:self-auto"
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
               >
                 <span className="material-symbols-outlined text-[15px] text-emerald-700">check_circle</span>
-                <span>1 Idle / 1 Busy</span>
+                <span>{bays.filter(b => b.status === 'available').length} Available / {bays.filter(b => b.status === 'busy').length} Busy</span>
               </div>
             </div>
 
@@ -675,13 +674,15 @@ export default function Dashboard() {
 
                       <div className="flex items-center gap-2">
                         <button
-                          onClick={() => handleCopyPin(item.pin)}
+                          onClick={() => handleCopyPin(item.pin, item.id)}
                           className="px-3 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
                           style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
                           title="Copy PIN"
                         >
-                          <span className="material-symbols-outlined text-[15px]">content_copy</span>
-                          <span>Copy</span>
+                          <span className="material-symbols-outlined text-[15px]">
+                            {copiedPinId === item.id ? 'check' : 'content_copy'}
+                          </span>
+                          <span>{copiedPinId === item.id ? 'Copied' : 'Copy'}</span>
                         </button>
 
                         <button

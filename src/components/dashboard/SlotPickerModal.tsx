@@ -353,9 +353,6 @@ export default function SlotPickerModal({
               const isBooked = slot.isBooked
               const isAvailable = slot.isAvailable
 
-              // Determine peak solar window
-              const isPeakSolar = slot.hour24 >= 11 && slot.hour24 <= 15
-
               return (
                 <div
                   key={slot.id}
@@ -419,7 +416,7 @@ export default function SlotPickerModal({
                     </span>
                   </div>
 
-                  {/* Right: Status Pill for Booked / Selected / Peak Solar (No redundant price) */}
+                  {/* Right: Status Pill for Booked or Selected Only */}
                   <div className="flex items-center shrink-0">
                     {isBooked ? (
                       <span className="text-[8px] sm:text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-800">
@@ -428,19 +425,6 @@ export default function SlotPickerModal({
                     ) : isSelected ? (
                       <span className="text-[8px] sm:text-[9px] font-extrabold px-1.5 py-0.5 rounded-full uppercase bg-[#fd8451] text-white">
                         Selected
-                      </span>
-                    ) : isPeakSolar ? (
-                      <span
-                        className="text-[8px] font-bold px-1.5 py-0.5 rounded-full uppercase text-[#fd8451] flex items-center gap-0.5"
-                        style={{
-                          background: '#dde8ea',
-                          boxShadow:
-                            'inset 1px 1px 2px #b8c6c9, inset -1px -1px 2px #ffffff',
-                        }}
-                        title="Peak Solar Window"
-                      >
-                        <span className="material-symbols-outlined text-[10px]">sunny</span>
-                        <span>Solar</span>
                       </span>
                     ) : null}
                   </div>

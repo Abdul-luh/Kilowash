@@ -175,10 +175,14 @@ export default function ComplaintModal({
                 <span className="text-[#8aa8ab] font-bold uppercase text-[10px]">Location</span>
                 <span className="font-extrabold text-[#0b3c42]">
                   {submittedTicket.bay === 'BAY-01'
-                    ? 'Bay 01 (Machine 01)'
+                    ? 'Female Hostel (Machine 01)'
                     : submittedTicket.bay === 'BAY-02'
-                    ? 'Bay 02 (Machine 02)'
-                    : 'Front block to middle block'}
+                    ? 'Front-Middle Block (Machine 02)'
+                    : submittedTicket.bay === 'BAY-03'
+                    ? 'PDS Male Hostel (Machine 03)'
+                    : submittedTicket.bay === 'BAY-04'
+                    ? 'PDS Female Hostel (Machine 04)'
+                    : 'Campus Hostel Area'}
                 </span>
               </div>
               <div className="flex items-center justify-between">
@@ -318,9 +322,10 @@ export default function ComplaintModal({
                 }}
               >
                 {[
-                  { id: 'BAY-01', label: 'Bay 01 (Machine 01)' },
-                  { id: 'BAY-02', label: 'Bay 02 (Machine 02)' },
-                  { id: 'ALL', label: 'All Machines' },
+                  { id: 'BAY-01', label: 'Female Hostel (01)' },
+                  { id: 'BAY-02', label: 'Front-Middle (02)' },
+                  { id: 'BAY-03', label: 'PDS Male (03)' },
+                  { id: 'BAY-04', label: 'PDS Female (04)' },
                 ].map(item => (
                   <button
                     key={item.id}
