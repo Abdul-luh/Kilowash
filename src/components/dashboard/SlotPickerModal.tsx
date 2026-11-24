@@ -523,6 +523,28 @@ export default function SlotPickerModal({
             </div>
           )} */}
 
+          {/* 30-Minute Automatic Reminder Notice */}
+          <div
+            className="p-3 rounded-2xl flex items-center gap-2.5 text-xs text-[#0b3c42]"
+            style={{
+              background: '#dde8ea',
+              boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+            }}
+          >
+            <div
+              className="w-8 h-8 rounded-xl flex items-center justify-center text-[#fd8451] shrink-0"
+              style={{ background: '#dde8ea', boxShadow: '2px 2px 5px #b8c6c9, -2px -2px 5px #ffffff' }}
+            >
+              <span className="material-symbols-outlined text-[18px]">alarm</span>
+            </div>
+            <div className="flex flex-col">
+              <span className="font-extrabold text-[#0b3c42]">30-Minute Pre-Wash Reminder</span>
+              <span className="text-[11px] text-[#5a7578]">
+                An SMS / WhatsApp reminder with your single-use keypad PIN will be sent 30 minutes before your wash window.
+              </span>
+            </div>
+          </div>
+
           {/* Checkout CTA */}
           <button
             type="button"

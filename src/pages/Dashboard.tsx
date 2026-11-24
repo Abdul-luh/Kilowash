@@ -4,6 +4,7 @@ import {
   INITIAL_BAYS,
   INITIAL_ACTIVE_CYCLES,
   MOCK_HISTORY,
+  calculateReminderTime,
   machineImg,
   type Bay,
   type BookingSlot,
@@ -15,7 +16,7 @@ import GuideModal from '../components/dashboard/GuideModal'
 import ComplaintModal from '../components/dashboard/ComplaintModal'
 
 export default function Dashboard() {
-  const [bays, setBays] = useState<Bay[]>(INITIAL_BAYS)
+  const [bays] = useState<Bay[]>(INITIAL_BAYS)
   const [selectedLocation, setSelectedLocation] = useState<string>('all')
   const [selectedBay, setSelectedBay] = useState<Bay | null>(null)
   const [isSlotModalOpen, setIsSlotModalOpen] = useState(false)
@@ -27,11 +28,22 @@ export default function Dashboard() {
   // Current active navigation tab: 'bays' | 'history' | 'guide'
   const [activeTab, setActiveTab] = useState<'bays' | 'history' | 'guide'>('bays')
 
+  // History filter: 'all' | 'booked' | 'completed'
+  const [historyFilter, setHistoryFilter] = useState<'all' | 'booked' | 'completed'>('all')
+
+  // Booking success confirmation banner
+  const [bookingToast, setBookingToast] = useState<{
+    pin: string
+    bayName: string
+    time: string
+    reminderTime: string
+  } | null>(null)
+
   // Active running wash cycles across campus machines (can be multiple simultaneously)
   const [activeCycles, setActiveCycles] = useState<ActiveCycle[]>(INITIAL_ACTIVE_CYCLES)
   const [expandedPinHelpId, setExpandedPinHelpId] = useState<string | null>(null)
 
-  // Wash history
+  // Wash history & booked sessions
   const [history, setHistory] = useState<WashHistoryItem[]>(MOCK_HISTORY)
 
   // Copy feedback state
@@ -43,19 +55,21 @@ export default function Dashboard() {
 
     const interval = setInterval(() => {
       setActiveCycles(prev =>
-        prev.map(cycle => {
-          if (cycle.remainingSeconds <= 1) {
+        prev
+          .map(cycle => {
+            if (cycle.remainingSeconds <= 1) {
+              return {
+                ...cycle,
+                remainingSeconds: 0,
+                stage: 'Buffer / Unload' as const,
+              }
+            }
             return {
               ...cycle,
-              remainingSeconds: 0,
-              stage: 'Buffer / Unload' as const,
+              remainingSeconds: cycle.remainingSeconds - 1,
             }
-          }
-          return {
-            ...cycle,
-            remainingSeconds: cycle.remainingSeconds - 1,
-          }
-        })
+          })
+          .filter(cycle => cycle.remainingSeconds > 0) // when a cycle finishes, it frees the bay
       )
     }, 1000)
 
@@ -88,55 +102,34 @@ export default function Dashboard() {
 
     const randomPin = String(Math.floor(1000 + Math.random() * 9000))
     const newBookingId = `BK-${Math.floor(1000 + Math.random() * 9000)}`
+    const reminderTime = calculateReminderTime(slot.timeLabel)
 
-    // Set new active cycle
-    const newCycle: ActiveCycle = {
-      bookingId: newBookingId,
+    // Prepend to booked sessions in history (does not go to active bays)
+    const newBooking: WashHistoryItem = {
+      id: newBookingId,
       bayId: selectedBay.id,
-      bayName: selectedBay.name,
-      location: selectedBay.hall,
-      machineName: selectedBay.subname,
+      bayName: `${selectedBay.subname} (${selectedBay.name})`,
+      date: slot.day === 'today' ? 'Today, Just Now' : slot.dayLabel,
+      time: slot.timeLabel,
       pin: randomPin,
-      isUserBooking: true,
-      remainingSeconds: 30 * 60,
-      totalSeconds: 30 * 60,
-      stage: 'Wash',
-      washType: `30-Min Eco Cold Wash${addDetergent ? ' (+ Pod Kit)' : ''}`,
-      powerSource: '100% Inverter Solar',
+      amount: addDetergent ? selectedBay.rate + 200 : selectedBay.rate,
+      status: 'Booked',
+      reminderNotice: `SMS & WhatsApp alert scheduled for ${reminderTime} (30m before wash)`,
+      reminderTime: reminderTime,
     }
 
-    setActiveCycles(prev => [newCycle, ...prev])
-
-    // Update bay status
-    setBays(prev =>
-      prev.map(b =>
-        b.id === selectedBay.id
-          ? {
-              ...b,
-              status: 'busy',
-              statusLabel: 'Busy (30m)',
-              remainingMinutes: 30,
-            }
-          : b
-      )
-    )
-
-    // Prepend to history
-    setHistory(prev => [
-      {
-        id: newBookingId,
-        bayId: selectedBay.id,
-        bayName: `${selectedBay.subname} (${selectedBay.name})`,
-        date: slot.day === 'today' ? 'Today, Just Now' : 'Tomorrow (Advance)',
-        time: slot.timeLabel,
-        pin: randomPin,
-        amount: addDetergent ? selectedBay.rate + 200 : selectedBay.rate,
-        status: 'Active',
-      },
-      ...prev,
-    ])
-
+    setHistory(prev => [newBooking, ...prev])
     setIsSlotModalOpen(false)
+
+    // Navigate to booked sessions in history to immediately view PIN and session
+    setActiveTab('history')
+    setHistoryFilter('all')
+    setBookingToast({
+      pin: randomPin,
+      bayName: `${selectedBay.subname} (${selectedBay.name})`,
+      time: slot.timeLabel,
+      reminderTime: reminderTime,
+    })
     window.scrollTo({ top: 0, behavior: 'smooth' })
   }
 
@@ -152,6 +145,16 @@ export default function Dashboard() {
     selectedLocation === 'all'
       ? bays
       : bays.filter(bay => bay.name.toLowerCase() === selectedLocation.toLowerCase())
+
+  const filteredHistory = history.filter(item => {
+    if (historyFilter === 'booked') return item.status === 'Booked' || item.status === 'Active'
+    if (historyFilter === 'completed') return item.status === 'Completed'
+    return true
+  })
+
+  const upcomingBookingsCount = history.filter(
+    h => h.status === 'Booked' || h.status === 'Active'
+  ).length
 
   return (
     <div
@@ -252,8 +255,8 @@ export default function Dashboard() {
         {/* ============================================================== */}
         {activeTab === 'bays' && (
           <>
-            {/* Active Wash Cycles Section — displays any machines currently running wash cycles */}
-            {activeCycles.length > 0 && (
+            {/* Active Wash Cycles Section — displays running machines or calm idle indicator when no active bays */}
+            {activeCycles.length > 0 ? (
               <section className="flex flex-col gap-3">
                 <div className="flex items-center justify-between gap-2 px-1">
                   <div className="flex items-center gap-2">
@@ -446,6 +449,37 @@ export default function Dashboard() {
                   })}
                 </div>
               </section>
+            ) : (
+              /* Calm Telemetry Banner when zero active bays */
+              <section
+                className="rounded-3xl p-4 sm:p-5 flex items-center justify-between gap-3 animate-fadeIn"
+                style={{
+                  background: '#dde8ea',
+                  boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
+                }}
+              >
+                <div className="flex items-center gap-3.5">
+                  <div
+                    className="w-10 h-10 rounded-2xl flex items-center justify-center text-emerald-700 shrink-0"
+                    style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+                  >
+                    <span className="material-symbols-outlined text-[22px]">check_circle</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="text-sm font-extrabold text-[#0b3c42]">All Campus Machines Idle & Ready</span>
+                    <span className="text-xs text-[#5a7578] mt-0.5">
+                      No active wash cycles running right now across campus. All 8 spots are completely available.
+                    </span>
+                  </div>
+                </div>
+                <span
+                  className="hidden sm:inline-flex items-center gap-1 px-3 py-1 rounded-full text-[11px] font-bold text-emerald-800 shrink-0"
+                  style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                >
+                  <span className="material-symbols-outlined text-[13px]">bolt</span>
+                  Zero Wait Time
+                </span>
+              </section>
             )}
 
             {/* Bays Header & Location Filter */}
@@ -633,23 +667,93 @@ export default function Dashboard() {
         )}
 
         {/* ============================================================== */}
-        {/* VIEW 2: WASH HISTORY & COMPLAINTS */}
+        {/* VIEW 2: BOOKED SESSIONS & WASH HISTORY */}
         {/* ============================================================== */}
         {activeTab === 'history' && (
           <div className="flex flex-col gap-4 animate-fadeIn">
-            {/* View Header */}
-            <div className="flex items-center justify-between px-1">
-              <div>
-                <h2 className="text-xl font-extrabold text-[#0b3c42]">Wash History</h2>
-                <p className="text-xs text-[#5a7578]">Past wash sessions, PIN records & booking receipts</p>
-              </div>
-              <span
-                className="px-3 py-1 rounded-full text-xs font-bold text-[#0b3c42] flex items-center gap-1.5"
-                style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
+            {/* Booking Confirmed Toast */}
+            {bookingToast && (
+              <div
+                className="rounded-3xl p-4 sm:p-5 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs animate-fadeIn"
+                style={{
+                  background: '#0b3c42',
+                  color: 'white',
+                  boxShadow: '6px 6px 16px rgba(11,60,66,0.35)',
+                }}
               >
-                <span className="material-symbols-outlined text-[15px] text-[#fd8451]">history</span>
-                <span>{history.length} Sessions</span>
-              </span>
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-white/10 flex items-center justify-center text-[#fd8451] shrink-0">
+                    <span className="material-symbols-outlined text-[22px]">check_circle</span>
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-extrabold text-sm text-white">Booking Confirmed & PIN Generated!</span>
+                    <span className="text-[#a2ced5] text-xs">
+                      {bookingToast.bayName} • {bookingToast.time}
+                    </span>
+                    <span className="text-[11px] text-[#fd8451] font-bold mt-0.5">
+                      🔔 30-min SMS reminder will be sent at {bookingToast.reminderTime}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 self-end sm:self-auto">
+                  <button
+                    onClick={() => handleCopyPin(bookingToast.pin)}
+                    className="px-3.5 py-1.5 rounded-full bg-white/20 hover:bg-white/30 text-white font-bold flex items-center gap-1"
+                  >
+                    <span className="material-symbols-outlined text-[15px]">content_copy</span>
+                    <span>Copy PIN ({bookingToast.pin})</span>
+                  </button>
+                  <button
+                    onClick={() => setBookingToast(null)}
+                    className="p-1 rounded-full text-white/70 hover:text-white"
+                  >
+                    <span className="material-symbols-outlined text-[18px]">close</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* View Header */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 px-1">
+              <div>
+                <h2 className="text-xl font-extrabold text-[#0b3c42]">Booked Sessions & Wash History</h2>
+                <p className="text-xs text-[#5a7578]">Upcoming reserved wash windows, door unlock PINs & receipts</p>
+              </div>
+
+              {/* Filter Tabs */}
+              <div
+                className="p-1 rounded-2xl flex items-center gap-1 self-start sm:self-auto"
+                style={{
+                  background: '#dde8ea',
+                  boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+                }}
+              >
+                {[
+                  { id: 'all', label: 'All', count: history.length },
+                  { id: 'booked', label: 'Upcoming', count: upcomingBookingsCount },
+                  { id: 'completed', label: 'Completed', count: history.filter(h => h.status === 'Completed').length },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    type="button"
+                    onClick={() => setHistoryFilter(tab.id as 'all' | 'booked' | 'completed')}
+                    className={`py-1.5 px-3 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      historyFilter === tab.id
+                        ? 'bg-[#0b3c42] text-white shadow'
+                        : 'text-[#5a7578] hover:text-[#0b3c42]'
+                    }`}
+                  >
+                    <span>{tab.label}</span>
+                    <span
+                      className={`text-[10px] px-1.5 py-0.2 rounded-full ${
+                        historyFilter === tab.id ? 'bg-white/20 text-white' : 'bg-[#b8c6c9]/40 text-[#0b3c42]'
+                      }`}
+                    >
+                      {tab.count}
+                    </span>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Prominent Complaint & Comment Card */}
@@ -695,116 +799,150 @@ export default function Dashboard() {
               </button>
             </div>
 
-            {/* Wash History Cards */}
+            {/* Wash History & Booked Cards */}
             <div className="flex flex-col gap-3">
-              {history.map(item => (
+              {filteredHistory.length === 0 ? (
                 <div
-                  key={item.id}
-                  className="rounded-2xl p-4 sm:p-5 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5"
+                  className="p-8 rounded-2xl text-center text-xs font-semibold text-[#5a7578]"
                   style={{
                     background: '#dde8ea',
-                    boxShadow: '5px 5px 14px #b8c6c9, -5px -5px 14px #ffffff',
+                    boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
                   }}
                 >
-                  <div className="flex items-center gap-3.5">
+                  No sessions found in this category.
+                </div>
+              ) : (
+                filteredHistory.map(item => {
+                  const isUpcoming = item.status === 'Booked' || item.status === 'Active'
+
+                  return (
                     <div
-                      className="w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-sm"
+                      key={item.id}
+                      className="rounded-2xl p-4 sm:p-5 flex flex-col gap-3 transition-all"
                       style={{
-                        background: item.status === 'Active' ? '#fd8451' : '#0b3c42',
-                        color: 'white',
-                        boxShadow: '3px 3px 7px rgba(11,60,66,0.3)',
+                        background: '#dde8ea',
+                        boxShadow: '5px 5px 14px #b8c6c9, -5px -5px 14px #ffffff',
                       }}
                     >
-                      <span className="material-symbols-outlined text-[20px]">
-                        {item.status === 'Active' ? 'cyclone' : 'receipt_long'}
-                      </span>
-                    </div>
+                      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3.5">
+                        <div className="flex items-center gap-3.5">
+                          <div
+                            className="w-12 h-12 rounded-2xl flex items-center justify-center font-extrabold text-sm shrink-0"
+                            style={{
+                              background: isUpcoming ? '#fd8451' : '#0b3c42',
+                              color: 'white',
+                              boxShadow: '3px 3px 7px rgba(11,60,66,0.3)',
+                            }}
+                          >
+                            <span className="material-symbols-outlined text-[20px]">
+                              {isUpcoming ? 'key' : 'receipt_long'}
+                            </span>
+                          </div>
 
-                    <div className="flex flex-col">
-                      <div className="flex items-center gap-2">
-                        <span className="text-xs font-bold text-[#0b3c42]">{item.bayName} ({item.bayId})</span>
-                        <span
-                          className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 ${
-                            item.status === 'Active' ? 'text-[#fd8451]' : 'text-emerald-700'
-                          }`}
-                          style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
-                        >
-                          <span className="material-symbols-outlined text-[11px]">
-                            {item.status === 'Active' ? 'sync' : 'check'}
-                          </span>
-                          <span>{item.status}</span>
-                        </span>
+                          <div className="flex flex-col">
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs font-bold text-[#0b3c42]">{item.bayName} ({item.bayId})</span>
+                              <span
+                                className={`text-[9px] font-bold px-2 py-0.5 rounded-full uppercase flex items-center gap-1 ${
+                                  isUpcoming ? 'text-emerald-800' : 'text-[#5a7578]'
+                                }`}
+                                style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
+                              >
+                                <span className="material-symbols-outlined text-[11px]">
+                                  {isUpcoming ? 'event_available' : 'check'}
+                                </span>
+                                <span>{isUpcoming ? 'Booked (Upcoming)' : item.status}</span>
+                              </span>
+                            </div>
+                            <span className="text-xs text-[#5a7578] mt-0.5">{item.date} • {item.time}</span>
+                            <span className="text-[10px] text-[#8aa8ab] font-bold mt-0.5">Ref: {item.id} • ₦{item.amount.toLocaleString()}</span>
+                          </div>
+                        </div>
+
+                        {isUpcoming ? (
+                          <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
+                            <div className="flex flex-col text-left sm:text-right mr-1">
+                              <span className="text-[10px] text-[#8aa8ab] uppercase font-bold">Keypad Unlock PIN</span>
+                              <span className="text-xl font-black tracking-widest text-[#0b3c42]">{item.pin}</span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleCopyPin(item.pin, item.id)}
+                                className="px-3 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
+                                style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+                                title="Copy PIN"
+                              >
+                                <span className="material-symbols-outlined text-[15px]">
+                                  {copiedPinId === item.id ? 'check' : 'content_copy'}
+                                </span>
+                                <span>{copiedPinId === item.id ? 'Copied' : 'Copy PIN'}</span>
+                              </button>
+
+                              <button
+                                onClick={() => {
+                                  setComplaintBookingId(item.id)
+                                  setComplaintBayId(item.bayId)
+                                  setIsComplaintModalOpen(true)
+                                }}
+                                className="px-2.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-1"
+                                style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                                title="Report issue or comment on this wash"
+                              >
+                                <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
+                                <span className="hidden sm:inline">Feedback</span>
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
+                          /* Past or completed wash: PIN is used/expired and no longer needed */
+                          <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
+                            <div className="flex items-center gap-1.5">
+                              <span
+                                className="px-2.5 py-1 rounded-full text-[10px] font-bold text-[#8aa8ab] uppercase tracking-wider flex items-center gap-1"
+                                style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
+                              >
+                                <span className="material-symbols-outlined text-[13px] text-emerald-700">lock</span>
+                                <span>PIN Expired / Used</span>
+                              </span>
+                            </div>
+
+                            <button
+                              onClick={() => {
+                                setComplaintBookingId(item.id)
+                                setComplaintBayId(item.bayId)
+                                setIsComplaintModalOpen(true)
+                              }}
+                              className="px-2.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-1"
+                              style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
+                              title="Report issue or comment on this wash"
+                            >
+                              <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
+                              <span>Issue / Comment</span>
+                            </button>
+                          </div>
+                        )}
                       </div>
-                      <span className="text-xs text-[#5a7578] mt-0.5">{item.date} • {item.time}</span>
-                      <span className="text-[10px] text-[#8aa8ab] font-bold mt-0.5">Ref: {item.id} • ₦{item.amount.toLocaleString()}</span>
-                    </div>
-                  </div>
 
-                  {item.status === 'Active' ? (
-                    <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
-                      <div className="flex flex-col text-left sm:text-right mr-1">
-                        <span className="text-[10px] text-[#8aa8ab] uppercase font-bold">Keypad PIN</span>
-                        <span className="text-lg font-black tracking-widest text-[#0b3c42]">{item.pin}</span>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <button
-                          onClick={() => handleCopyPin(item.pin, item.id)}
-                          className="px-3 py-1.5 rounded-full text-xs font-bold transition-all text-[#0b3c42] flex items-center gap-1"
-                          style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
-                          title="Copy PIN"
-                        >
-                          <span className="material-symbols-outlined text-[15px]">
-                            {copiedPinId === item.id ? 'check' : 'content_copy'}
-                          </span>
-                          <span>{copiedPinId === item.id ? 'Copied' : 'Copy'}</span>
-                        </button>
-
-                        <button
-                          onClick={() => {
-                            setComplaintBookingId(item.id)
-                            setComplaintBayId(item.bayId)
-                            setIsComplaintModalOpen(true)
+                      {/* 30-Minute Pre-Wash Reminder Notice for Upcoming Sessions */}
+                      {isUpcoming && (
+                        <div
+                          className="flex items-center gap-2 p-2.5 rounded-xl text-xs font-semibold text-[#0b3c42] mt-1"
+                          style={{
+                            background: '#dde8ea',
+                            boxShadow: 'inset 1.5px 1.5px 4px #b8c6c9, inset -1.5px -1.5px 4px #ffffff',
                           }}
-                          className="px-2.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-1"
-                          style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
-                          title="Report issue or comment on this wash"
                         >
-                          <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
-                          <span className="hidden sm:inline">Issue / Feedback</span>
-                        </button>
-                      </div>
+                          <span className="material-symbols-outlined text-[16px] text-[#fd8451] shrink-0">alarm</span>
+                          <span>
+                            <strong>30-Min Pre-Wash Alert:</strong> Reminder scheduled for <strong>{item.reminderTime || calculateReminderTime(item.time)}</strong> (30 mins prior to wash unlock).
+                          </span>
+                        </div>
+                      )}
                     </div>
-                  ) : (
-                    /* Past or completed wash: PIN is used/expired and no longer needed */
-                    <div className="flex items-center justify-between sm:justify-end gap-3 border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/40">
-                      <div className="flex items-center gap-1.5">
-                        <span
-                          className="px-2.5 py-1 rounded-full text-[10px] font-bold text-[#8aa8ab] uppercase tracking-wider flex items-center gap-1"
-                          style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
-                        >
-                          <span className="material-symbols-outlined text-[13px] text-emerald-700">lock</span>
-                          <span>PIN Expired / Used</span>
-                        </span>
-                      </div>
-
-                      <button
-                        onClick={() => {
-                          setComplaintBookingId(item.id)
-                          setComplaintBayId(item.bayId)
-                          setIsComplaintModalOpen(true)
-                        }}
-                        className="px-2.5 py-1.5 rounded-full text-xs font-bold transition-all text-[#5a7578] hover:text-[#0b3c42] flex items-center gap-1"
-                        style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff' }}
-                        title="Report issue or comment on this wash"
-                      >
-                        <span className="material-symbols-outlined text-[14px] text-[#fd8451]">report_problem</span>
-                        <span>Issue / Comment</span>
-                      </button>
-                    </div>
-                  )}
-                </div>
-              ))}
+                  )
+                })
+              )}
             </div>
           </div>
         )}
@@ -918,7 +1056,7 @@ export default function Dashboard() {
 
           <button
             onClick={() => setActiveTab('history')}
-            className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-2 text-xs font-extrabold transition-all ${
+            className={`flex-1 py-2.5 px-3 rounded-full flex items-center justify-center gap-1.5 text-xs font-extrabold transition-all relative ${
               activeTab === 'history' ? 'text-white' : 'text-[#5a7578] hover:text-[#0b3c42]'
             }`}
             style={
@@ -928,7 +1066,18 @@ export default function Dashboard() {
             }
           >
             <span className="material-symbols-outlined text-[18px]">history</span>
-            <span>Wash History</span>
+            <span>Booked & History</span>
+            {upcomingBookingsCount > 0 && (
+              <span
+                className="w-4 h-4 rounded-full text-[10px] font-black flex items-center justify-center ml-0.5"
+                style={{
+                  background: activeTab === 'history' ? '#fd8451' : '#0b3c42',
+                  color: 'white',
+                }}
+              >
+                {upcomingBookingsCount}
+              </span>
+            )}
           </button>
 
           <button

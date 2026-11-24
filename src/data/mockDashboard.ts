@@ -57,24 +57,35 @@ export interface WashHistoryItem {
   time: string
   pin: string
   amount: number
-  status: 'Completed' | 'Forfeited' | 'Active'
+  status: 'Booked' | 'Active' | 'Completed' | 'Forfeited'
+  reminderNotice?: string
+  reminderTime?: string
+}
+
+export function calculateReminderTime(timeLabel: string): string {
+  try {
+    const startTimePart = timeLabel.split('–')[0].trim() // e.g. "03:00 PM"
+    const [time, period] = startTimePart.split(' ') // "03:00", "PM"
+    const [hourStr, minStr] = time.split(':')
+    let h = parseInt(hourStr, 10)
+    const m = parseInt(minStr, 10)
+    if (period === 'PM' && h !== 12) h += 12
+    if (period === 'AM' && h === 12) h = 0
+
+    let reminderTotalM = h * 60 + m - 30
+    if (reminderTotalM < 0) reminderTotalM += 24 * 60
+
+    const remH = Math.floor(reminderTotalM / 60)
+    const remM = reminderTotalM % 60
+    const remPeriod = remH >= 12 ? 'PM' : 'AM'
+    const displayH = remH % 12 === 0 ? 12 : remH % 12
+    return `${String(displayH).padStart(2, '0')}:${String(remM).padStart(2, '0')} ${remPeriod}`
+  } catch {
+    return '30 mins before wash'
+  }
 }
 
 export const INITIAL_ACTIVE_CYCLES: ActiveCycle[] = [
-  {
-    bookingId: 'BK-4108',
-    bayId: 'BAY-02',
-    bayName: 'Female Hostel',
-    location: 'Female Hostel',
-    machineName: 'Machine 02',
-    pin: '5182',
-    isUserBooking: true,
-    remainingSeconds: 18 * 60 + 24,
-    totalSeconds: 35 * 60,
-    stage: 'Rinse',
-    washType: '35-Min Eco Cold Wash',
-    powerSource: '100% Inverter Solar',
-  },
   {
     bookingId: 'BK-7721',
     bayId: 'BAY-05',
@@ -112,14 +123,13 @@ export const INITIAL_BAYS: Bay[] = [
     name: 'Female Hostel',
     subname: 'Machine 02',
     hall: 'Female Hostel',
-    capacity: '10kg Drum • In Rinse Cycle',
+    capacity: '10kg Drum • Clean & Primed',
     type: 'standard',
-    status: 'busy',
-    statusLabel: 'Busy (18m)',
+    status: 'available',
+    statusLabel: 'Available',
     rate: 1500,
     cycleDurationMinutes: 30,
     bufferMinutes: 10,
-    remainingMinutes: 18,
     waterTemp: 'Cold Eco',
     solarBatteryLevel: 94,
   },
@@ -300,18 +310,20 @@ export const MULTI_DAY_SLOTS: BookingSlot[] = [
 export const MOCK_HISTORY: WashHistoryItem[] = [
   {
     id: 'BK-4108',
-    bayId: 'BAY-02',
-    bayName: 'Machine 02 (Female Hostel)',
-    date: 'Today, Just Now',
-    time: '11:00 AM – 11:30 AM',
+    bayId: 'BAY-01',
+    bayName: 'Machine 01 (Female Hostel)',
+    date: 'Today, 24 Nov',
+    time: '03:00 PM – 03:30 PM',
     pin: '5182',
     amount: 1500,
-    status: 'Active',
+    status: 'Booked',
+    reminderNotice: 'SMS reminder scheduled for 02:30 PM (30m before wash)',
+    reminderTime: '02:30 PM',
   },
   {
     id: 'BK-8291',
-    bayId: 'BAY-01',
-    bayName: 'Machine 01 (Female Hostel)',
+    bayId: 'BAY-03',
+    bayName: 'Machine 03 (Front-Middle)',
     date: '18 Nov 2026',
     time: '04:00 PM – 04:30 PM',
     pin: '4829',
@@ -320,8 +332,8 @@ export const MOCK_HISTORY: WashHistoryItem[] = [
   },
   {
     id: 'BK-7104',
-    bayId: 'BAY-04',
-    bayName: 'Machine 04 (Front-Middle)',
+    bayId: 'BAY-06',
+    bayName: 'Machine 06 (PDS Male)',
     date: '14 Nov 2026',
     time: '11:00 AM – 11:30 AM',
     pin: '2105',
