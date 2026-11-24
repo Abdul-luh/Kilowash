@@ -516,7 +516,7 @@ export default function Dashboard() {
                         }}
                       >
                         <span className="material-symbols-outlined text-[18px]">calendar_add_on</span>
-                        <span>Book {bay.id} (Today or Tomorrow)</span>
+                        <span>Book {bay.id} (Schedule Calendar)</span>
                       </button>
                     ) : (
                       <button
@@ -529,7 +529,7 @@ export default function Dashboard() {
                         }}
                       >
                         <span className="material-symbols-outlined text-[18px] text-[#5a7578]">event_upcoming</span>
-                        <span>Book Next Slots (1 Day Ahead)</span>
+                        <span>View Schedule & Book Ahead</span>
                       </button>
                     )}
                   </div>

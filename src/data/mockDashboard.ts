@@ -22,14 +22,16 @@ export interface Bay {
 
 export interface BookingSlot {
   id: string
-  day: 'today' | 'tomorrow'
+  day: 'today' | 'tomorrow' | string
+  dateStr?: string
   dayLabel: string
   timeLabel: string
   startTime: string
   endTime: string
-  hour24: number // for daylight calculations (e.g. 8.0, 8.5, 9.0 ...)
+  hour24: number // 0.0 to 23.5
   isAvailable: boolean
   isPast?: boolean
+  isBooked?: boolean
 }
 
 export interface ActiveCycle {
@@ -89,21 +91,31 @@ export const INITIAL_BAYS: Bay[] = [
   },
 ]
 
-// Generate 30-minute interval slots from 07:00 AM to 09:30 PM
-function generate30MinSlots(day: 'today' | 'tomorrow', dayLabel: string): BookingSlot[] {
+// Generate full 24-hour slots (every 30 mins, 48 total slots) for any given target date
+export function generate24HourSlotsForDate(targetDate: Date): BookingSlot[] {
   const slots: BookingSlot[] = []
   const now = new Date()
+
+  // Compare year, month, date to determine if targetDate is today
+  const isToday =
+    targetDate.getFullYear() === now.getFullYear() &&
+    targetDate.getMonth() === now.getMonth() &&
+    targetDate.getDate() === now.getDate()
+
   const currentHourDecimal = now.getHours() + now.getMinutes() / 60
+  const dateStr = targetDate.toISOString().split('T')[0]
 
-  // From 7:00 AM (7.0) to 9:30 PM (21.5)
-  for (let h = 7; h <= 21; h++) {
+  const dayLabel = isToday
+    ? `Today, ${targetDate.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' })}`
+    : targetDate.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' })
+
+  // 24 hours: 00:00 to 23:30 (48 half-hour slots)
+  for (let h = 0; h < 24; h++) {
     for (const m of [0, 30]) {
-      if (h === 21 && m > 30) continue // stop at 21:30
-
       const startH = h
       const startM = m
       const endTotalM = h * 60 + m + 30
-      const endH = Math.floor(endTotalM / 60)
+      const endH = Math.floor(endTotalM / 60) % 24
       const endM = endTotalM % 60
 
       const formatTime = (hour: number, minute: number) => {
@@ -116,14 +128,25 @@ function generate30MinSlots(day: 'today' | 'tomorrow', dayLabel: string): Bookin
       const endStr = formatTime(endH, endM)
       const hourDecimal = h + m / 60
 
-      // A slot is past if it's today and the time has already passed
-      const isPast = day === 'today' && hourDecimal <= currentHourDecimal
-      // Simulate a couple occupied slots among future slots
-      const isAvailable = !isPast && !(day === 'today' && (hourDecimal === 19.0 || hourDecimal === 20.0))
+      // A slot has passed if date is today and time has already passed
+      const isPast = isToday && hourDecimal <= currentHourDecimal
+
+      // Deterministic booked slots for realistic hostel simulation
+      const daySeed = targetDate.getDate()
+      const isBooked =
+        !isPast &&
+        ((h === 13 && m === 0) ||
+          (h === 18 && m === 30) ||
+          (h === 11 && m === 30 && daySeed % 2 === 0) ||
+          (h === 15 && m === 0 && daySeed % 3 === 0) ||
+          (h === 20 && m === 0))
+
+      const isAvailable = !isPast && !isBooked
 
       slots.push({
-        id: `${day}-${h}-${m}`,
-        day,
+        id: `${dateStr}-${h}-${m}`,
+        day: isToday ? 'today' : 'future',
+        dateStr,
         dayLabel,
         timeLabel: `${startStr} – ${endStr}`,
         startTime: startStr,
@@ -131,15 +154,16 @@ function generate30MinSlots(day: 'today' | 'tomorrow', dayLabel: string): Bookin
         hour24: hourDecimal,
         isAvailable,
         isPast,
+        isBooked,
       })
     }
   }
+
   return slots
 }
 
 export const MULTI_DAY_SLOTS: BookingSlot[] = [
-  ...generate30MinSlots('today', 'Today'),
-  ...generate30MinSlots('tomorrow', 'Tomorrow'),
+  ...generate24HourSlotsForDate(new Date()),
 ]
 
 export const MOCK_HISTORY: WashHistoryItem[] = [

@@ -1,6 +1,6 @@
-import { useState, useMemo, useRef, useCallback } from 'react'
+import { useState, useMemo } from 'react'
 import type { Bay, BookingSlot } from '../../data/mockDashboard'
-import { MULTI_DAY_SLOTS } from '../../data/mockDashboard'
+import { generate24HourSlotsForDate } from '../../data/mockDashboard'
 
 interface SlotPickerModalProps {
   bay: Bay
@@ -9,188 +9,141 @@ interface SlotPickerModalProps {
   onConfirmBooking: (slot: BookingSlot, addDetergent: boolean) => void
 }
 
+type TimePeriodFilter = 'all' | 'morning' | 'afternoon' | 'evening' | 'night'
+
 export default function SlotPickerModal({
   bay,
   isOpen,
   onClose,
   onConfirmBooking,
 }: SlotPickerModalProps) {
-  const [selectedDay, setSelectedDay] = useState<'today' | 'tomorrow'>(() => {
-    const hasTodayUpcoming = MULTI_DAY_SLOTS.some(s => s.day === 'today' && !s.isPast)
-    return hasTodayUpcoming ? 'today' : 'tomorrow'
+  // Selected date state (defaults to Today)
+  const [selectedDate, setSelectedDate] = useState<Date>(() => {
+    const today = new Date()
+    today.setHours(0, 0, 0, 0)
+    return today
   })
 
-  // ONLY upcoming slots are placed on the knob - passed times are removed completely
-  const daySlots = useMemo(() => {
-    const upcoming = MULTI_DAY_SLOTS.filter(s => s.day === selectedDay && !s.isPast)
-    if (upcoming.length === 0) {
-      return MULTI_DAY_SLOTS.filter(s => s.day === 'tomorrow' && !s.isPast)
-    }
-    return upcoming
-  }, [selectedDay])
+  // Selected slot within the chosen day
+  const [selectedSlot, setSelectedSlot] = useState<BookingSlot | null>(null)
 
-  const [selectedSlotIndex, setSelectedSlotIndex] = useState<number>(0)
+  // Period filter for quick filtering (All 48 slots, or by time of day)
+  const [periodFilter, setPeriodFilter] = useState<TimePeriodFilter>('all')
 
-  // Manual Time Input Mode
-  const [isManualInput, setIsManualInput] = useState(false)
-  const [manualTime, setManualTime] = useState('13:00')
-
-  // Detergent state (kept in component logic for backward compatibility, UI commented out)
-  const [addDetergent] = useState(false)
+  // Booking processing state
   const [isProcessing, setIsProcessing] = useState(false)
 
-  // Rotary mouse drag interaction refs
-  const dialRef = useRef<SVGSVGElement>(null)
-  const isDragging = useRef(false)
+  // Helper to test if a date is today
+  const isDateToday = useMemo(() => {
+    const now = new Date()
+    return (
+      selectedDate.getFullYear() === now.getFullYear() &&
+      selectedDate.getMonth() === now.getMonth() &&
+      selectedDate.getDate() === now.getDate()
+    )
+  }, [selectedDate])
 
-  const totalSlots = daySlots.length
-  const stepAngle = 270 / Math.max(1, totalSlots - 1)
+  // Generate 24-hour slots (48 total) for the selected date
+  const daySlots = useMemo(() => {
+    return generate24HourSlotsForDate(selectedDate)
+  }, [selectedDate])
 
-  // Safe index within range
-  const safeIndex = Math.min(Math.max(0, selectedSlotIndex), totalSlots - 1)
-  const currentSlot = daySlots[safeIndex] || daySlots[0]
+  // Auto-select the first available slot when date changes (if no valid selection)
+  useMemo(() => {
+    if (!selectedSlot || selectedSlot.dateStr !== selectedDate.toISOString().split('T')[0]) {
+      const firstAvailable = daySlots.find(s => s.isAvailable)
+      setSelectedSlot(firstAvailable || null)
+    }
+  }, [daySlots, selectedDate, selectedSlot])
 
-  const handleSelectDay = useCallback((day: 'today' | 'tomorrow') => {
-    setSelectedDay(day)
-    setSelectedSlotIndex(0)
+  // Filter slots by time period
+  const filteredSlots = useMemo(() => {
+    if (periodFilter === 'all') return daySlots
+    if (periodFilter === 'morning') return daySlots.filter(s => s.hour24 >= 6 && s.hour24 < 12)
+    if (periodFilter === 'afternoon') return daySlots.filter(s => s.hour24 >= 12 && s.hour24 < 17)
+    if (periodFilter === 'evening') return daySlots.filter(s => s.hour24 >= 17 && s.hour24 < 21)
+    if (periodFilter === 'night') return daySlots.filter(s => s.hour24 >= 21 || s.hour24 < 6)
+    return daySlots
+  }, [daySlots, periodFilter])
+
+  // Slot counts for summary
+  const availableCount = useMemo(() => daySlots.filter(s => s.isAvailable).length, [daySlots])
+  const bookedCount = useMemo(() => daySlots.filter(s => s.isBooked).length, [daySlots])
+  const passedCount = useMemo(() => daySlots.filter(s => s.isPast).length, [daySlots])
+
+  // Multi-day date horizontal list (Generate 14 days starting from today or current date window)
+  const upcomingDays = useMemo(() => {
+    const list = []
+    const start = new Date()
+    start.setHours(0, 0, 0, 0)
+    for (let i = 0; i < 14; i++) {
+      const d = new Date(start)
+      d.setDate(start.getDate() + i)
+      list.push(d)
+    }
+    return list
   }, [])
 
-  // Mouse & Touch Pointer Drag Handler (Clean geometric polar angle)
-  const updateAngleFromPointer = (clientX: number, clientY: number) => {
-    if (!dialRef.current) return
-    const rect = dialRef.current.getBoundingClientRect()
-    const cx = rect.left + rect.width / 2
-    const cy = rect.top + rect.height / 2
-
-    const dx = clientX - cx
-    const dy = clientY - cy
-
-    // Angle in degrees: 0 at top (12 o'clock), positive clockwise, negative counter-clockwise
-    let deg = Math.atan2(dx, -dy) * (180 / Math.PI)
-
-    // Arc range: -135deg (bottom-left) to +135deg (bottom-right)
-    if (deg < -135) deg = -135
-    if (deg > 135) deg = 135
-
-    const fraction = (deg + 135) / 270
-    const slotIdx = Math.round(fraction * (totalSlots - 1))
-    setSelectedSlotIndex(Math.min(Math.max(0, slotIdx), totalSlots - 1))
-  }
-
-  const handlePointerDown = (e: React.PointerEvent) => {
-    isDragging.current = true
-    ;(e.currentTarget as Element).setPointerCapture(e.pointerId)
-    updateAngleFromPointer(e.clientX, e.clientY)
-  }
-
-  const handlePointerMove = (e: React.PointerEvent) => {
-    if (!isDragging.current) return
-    updateAngleFromPointer(e.clientX, e.clientY)
-  }
-
-  const handlePointerUp = (e: React.PointerEvent) => {
-    isDragging.current = false
-    try {
-      ;(e.currentTarget as Element).releasePointerCapture(e.pointerId)
-    } catch {
-      // ignore
-    }
-  }
-
-  // Handle Manual Time change from <input type="time" />
-  function handleManualTimeChange(val: string) {
-    setManualTime(val)
-    if (!val) return
-
-    const [hStr, mStr] = val.split(':')
-    const h = parseInt(hStr, 10)
-    const m = parseInt(mStr, 10)
-    const totalMinutes = h * 60 + m
-
-    // Find the closest 30-min slot
-    let closestIdx = 0
-    let minDiff = Infinity
-
-    daySlots.forEach((slot, i) => {
-      const slotMinutes = Math.floor(slot.hour24) * 60 + Math.round((slot.hour24 % 1) * 60)
-      const diff = Math.abs(totalMinutes - slotMinutes)
-      if (diff < minDiff) {
-        minDiff = diff
-        closestIdx = i
-      }
+  // Handlers for Next Day and Previous Day
+  function handleNextDay() {
+    setSelectedDate(prev => {
+      const next = new Date(prev)
+      next.setDate(prev.getDate() + 1)
+      return next
     })
-
-    setSelectedSlotIndex(closestIdx)
   }
 
-  // Daylight state calculations
-  const hour = currentSlot.hour24
-  let dayPhase = 'Morning Sunrise'
-  let phaseIcon = 'wb_twilight'
-  let phaseColor = '#fd8451'
-  let skyBackground = 'linear-gradient(135deg, rgba(253,132,81,0.18) 0%, rgba(221,232,234,0.9) 80%)'
-
-  // Progress from 7 AM (0) to 9:30 PM (1)
-  const daylightProgress = Math.min(1, Math.max(0, (hour - 7) / (21.5 - 7)))
-
-  if (hour < 11.5) {
-    dayPhase = 'Morning Sunrise'
-    phaseIcon = 'wb_twilight'
-    phaseColor = '#fd8451'
-    skyBackground = 'linear-gradient(135deg, rgba(253,132,81,0.18) 0%, rgba(221,232,234,0.9) 80%)'
-  } else if (hour <= 14.5) {
-    dayPhase = 'Midday Zenith (Peak Solar)'
-    phaseIcon = 'wb_sunny'
-    phaseColor = '#f59e0b'
-    skyBackground = 'linear-gradient(135deg, rgba(245,158,11,0.2) 0%, rgba(221,232,234,0.95) 100%)'
-  } else if (hour <= 17.5) {
-    dayPhase = 'Afternoon Solar'
-    phaseIcon = 'light_mode'
-    phaseColor = '#fd8451'
-    skyBackground = 'linear-gradient(135deg, rgba(253,132,81,0.15) 0%, rgba(221,232,234,0.9) 100%)'
-  } else if (hour <= 19) {
-    dayPhase = 'Dusk / Sunset'
-    phaseIcon = 'wb_twilight'
-    phaseColor = '#ea580c'
-    skyBackground = 'linear-gradient(135deg, rgba(234,88,12,0.2) 0%, rgba(11,60,66,0.15) 100%)'
-  } else {
-    dayPhase = 'Night Battery Buffer'
-    phaseIcon = 'bedtime'
-    phaseColor = '#a2ced5'
-    skyBackground = 'linear-gradient(135deg, rgba(11,60,66,0.3) 0%, rgba(221,232,234,0.9) 100%)'
+  function handlePrevDay() {
+    if (isDateToday) return
+    setSelectedDate(prev => {
+      const prevDay = new Date(prev)
+      prevDay.setDate(prev.getDate() - 1)
+      return prevDay
+    })
   }
 
-  const basePrice = bay.rate
-  const finalPrice = addDetergent ? basePrice + 200 : basePrice
+  function handleSelectDate(date: Date) {
+    const target = new Date(date)
+    target.setHours(0, 0, 0, 0)
+    setSelectedDate(target)
+  }
 
-  function handlePay() {
-    if (!currentSlot.isAvailable || currentSlot.isPast) return
+  function handleSelectSlot(slot: BookingSlot) {
+    if (!slot.isAvailable) return
+    setSelectedSlot(slot)
+  }
+
+  function handleConfirm() {
+    if (!selectedSlot || !selectedSlot.isAvailable) return
     setIsProcessing(true)
     setTimeout(() => {
       setIsProcessing(false)
-      onConfirmBooking(currentSlot, addDetergent)
-    }, 1200)
+      onConfirmBooking(selectedSlot, false)
+    }, 1000)
   }
-
-  // SVG Geometry constants for pure distortion-free rendering
-  const cx = 135
-  const cy = 135
-
-  // Active slot rotation angle on 270-degree arc (-135deg to +135deg)
-  const activeAngleDeg = -135 + safeIndex * stepAngle
 
   if (!isOpen) return null
 
+  // Date formatted strings
+  const formattedSelectedDate = selectedDate.toLocaleDateString('en-GB', {
+    weekday: 'long',
+    day: 'numeric',
+    month: 'long',
+    year: 'numeric',
+  })
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-[#0b3c42]/40 backdrop-blur-sm animate-fadeIn">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-[#0b3c42]/50 backdrop-blur-sm animate-fadeIn">
       <div
-        className="w-full max-w-lg rounded-3xl p-5 sm:p-7 flex flex-col gap-4 relative max-h-[94vh] overflow-y-auto"
+        className="w-full max-w-2xl rounded-3xl p-4 sm:p-7 flex flex-col gap-4 relative max-h-[92vh] overflow-y-auto"
         style={{
           background: '#dde8ea',
           boxShadow: '16px 16px 36px #b0bec0, -16px -16px 36px #ffffff',
         }}
       >
-        {/* Header */}
+        {/* ============================================================== */}
+        {/* MODAL HEADER */}
+        {/* ============================================================== */}
         <div className="flex items-start justify-between gap-3 border-b border-[#b8c6c9]/40 pb-3">
           <div>
             <div className="flex items-center gap-2">
@@ -198,616 +151,459 @@ export default function SlotPickerModal({
                 className="text-[10px] font-bold uppercase tracking-wider text-[#fd8451] px-2.5 py-0.5 rounded-full flex items-center gap-1"
                 style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff' }}
               >
-                <span className="material-symbols-outlined text-[13px]">tune</span>
-                <span>Rotary Washer Knob</span>
+                <span className="material-symbols-outlined text-[14px]">calendar_month</span>
+                <span>24-Hour Schedule Calendar</span>
               </span>
-              <span className="text-xs text-[#5a7578] font-medium">{bay.hall}</span>
+              <span className="text-xs text-[#5a7578] font-semibold">{bay.hall}</span>
             </div>
-            <h2 className="text-xl font-extrabold text-[#0b3c42] mt-1">{bay.subname} ({bay.id})</h2>
+            <h2 className="text-xl sm:text-2xl font-extrabold text-[#0b3c42] mt-1">
+              {bay.subname} ({bay.id})
+            </h2>
           </div>
+
           <button
             onClick={onClose}
-            className="w-9 h-9 rounded-full flex items-center justify-center text-[#5a7578] hover:text-[#0b3c42] transition-colors"
+            className="w-9 h-9 rounded-full flex items-center justify-center text-[#5a7578] hover:text-[#0b3c42] transition-colors shrink-0"
             style={{ background: '#dde8ea', boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff' }}
+            aria-label="Close scheduler"
           >
             <span className="material-symbols-outlined text-[18px]">close</span>
           </button>
         </div>
 
-        {/* 1-Day Advance Booking Day Toggle */}
+        {/* ============================================================== */}
+        {/* CALENDAR DATE NAVIGATION & MULTI-DAY STRIP */}
+        {/* ============================================================== */}
         <div
-          className="p-1 rounded-full flex items-center"
-          style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 6px #b8c6c9, inset -2px -2px 6px #ffffff' }}
+          className="rounded-3xl p-3.5 sm:p-4 flex flex-col gap-3"
+          style={{
+            background: '#dde8ea',
+            boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
+          }}
         >
-          <button
-            type="button"
-            onClick={() => handleSelectDay('today')}
-            className={`flex-1 py-2 px-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              selectedDay === 'today' ? 'text-white' : 'text-[#5a7578] hover:text-[#0b3c42]'
-            }`}
-            style={
-              selectedDay === 'today'
-                ? { background: '#0b3c42', boxShadow: '2px 2px 6px rgba(11,60,66,0.35)' }
-                : { background: 'transparent' }
-            }
-          >
-            <span className="material-symbols-outlined text-[15px]">today</span>
-            <span>Today (30-Min Cycles)</span>
-          </button>
+          {/* Month / Date Banner with Next Day Buttons */}
+          <div className="flex items-center justify-between gap-2">
+            <div>
+              <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8aa8ab]">
+                Select Booking Date
+              </span>
+              <h3 className="text-sm sm:text-base font-extrabold text-[#0b3c42] leading-tight">
+                {formattedSelectedDate}
+                {isDateToday && (
+                  <span className="ml-2 px-2 py-0.5 rounded-full bg-[#0b3c42] text-white text-[10px] font-bold uppercase tracking-wider">
+                    Today
+                  </span>
+                )}
+              </h3>
+            </div>
 
-          <button
-            type="button"
-            onClick={() => handleSelectDay('tomorrow')}
-            className={`flex-1 py-2 px-3 rounded-full text-xs font-bold transition-all flex items-center justify-center gap-1.5 ${
-              selectedDay === 'tomorrow' ? 'text-white' : 'text-[#5a7578] hover:text-[#0b3c42]'
-            }`}
-            style={
-              selectedDay === 'tomorrow'
-                ? { background: '#0b3c42', boxShadow: '2px 2px 6px rgba(11,60,66,0.35)' }
-                : { background: 'transparent' }
-            }
-          >
-            <span className="material-symbols-outlined text-[15px]">event_upcoming</span>
-            <span>Tomorrow (1 Day Ahead)</span>
-          </button>
-        </div>
-
-        {/* Manual Time Input vs Rotary Toggle Strip */}
-        <div className="flex items-center justify-between px-1">
-          <button
-            type="button"
-            onClick={() => setIsManualInput(!isManualInput)}
-            className="text-[11px] font-bold text-[#fd8451] hover:underline flex items-center gap-1"
-          >
-            <span className="material-symbols-outlined text-[14px]">
-              {isManualInput ? 'tune' : 'edit_calendar'}
-            </span>
-            <span>{isManualInput ? 'Switch to Rotary Dial' : 'Or enter custom time manually'}</span>
-          </button>
-
-          {isManualInput && (
-            <div className="flex items-center gap-1.5 animate-fadeIn">
-              <span className="text-[11px] font-bold text-[#0b3c42]">Set Time:</span>
-              <input
-                type="time"
-                value={manualTime}
-                onChange={e => handleManualTimeChange(e.target.value)}
-                className="px-2.5 py-1 rounded-lg text-xs font-bold text-[#0b3c42] outline-none"
+            {/* Next / Previous Day Buttons */}
+            <div className="flex items-center gap-1.5 shrink-0">
+              <button
+                type="button"
+                disabled={isDateToday}
+                onClick={handlePrevDay}
+                className={`py-1.5 px-3 rounded-full text-xs font-bold flex items-center gap-1 transition-all ${
+                  isDateToday
+                    ? 'opacity-35 cursor-not-allowed text-[#8aa8ab]'
+                    : 'text-[#0b3c42] hover:text-[#fd8451] active:scale-95'
+                }`}
                 style={{
                   background: '#dde8ea',
-                  boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
-                  border: '1px solid rgba(184, 198, 201, 0.5)',
+                  boxShadow: isDateToday
+                    ? 'none'
+                    : '3px 3px 6px #b8c6c9, -3px -3px 6px #ffffff',
                 }}
-              />
+                title="Previous Day"
+              >
+                <span className="material-symbols-outlined text-[16px]">chevron_left</span>
+                <span className="hidden sm:inline">Prev Day</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextDay}
+                className="py-1.5 px-3.5 rounded-full text-xs font-bold text-white flex items-center gap-1 transition-all active:scale-95"
+                style={{
+                  background: '#0b3c42',
+                  boxShadow: '3px 3px 8px rgba(11,60,66,0.35), -2px -2px 6px #ffffff',
+                }}
+                title="Next Day"
+              >
+                <span>Next Day</span>
+                <span className="material-symbols-outlined text-[16px]">chevron_right</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Horizontal Interactive Date Picker Strip (Next day and the next day...) */}
+          <div className="flex items-center gap-2 overflow-x-auto pb-1.5 pt-0.5 no-scrollbar scroll-smooth">
+            {upcomingDays.map((d, idx) => {
+              const isSelected =
+                d.getDate() === selectedDate.getDate() &&
+                d.getMonth() === selectedDate.getMonth() &&
+                d.getFullYear() === selectedDate.getFullYear()
+
+              const isDayToday = idx === 0
+              const dayName = isDayToday
+                ? 'Today'
+                : d.toLocaleDateString('en-GB', { weekday: 'short' })
+              const dayNum = d.getDate()
+              const monthName = d.toLocaleDateString('en-GB', { month: 'short' })
+
+              return (
+                <button
+                  key={d.toISOString()}
+                  type="button"
+                  onClick={() => handleSelectDate(d)}
+                  className={`py-2 px-3.5 rounded-2xl flex flex-col items-center justify-center shrink-0 min-w-[62px] transition-all cursor-pointer ${
+                    isSelected ? 'text-white' : 'text-[#0b3c42] hover:text-[#fd8451]'
+                  }`}
+                  style={
+                    isSelected
+                      ? {
+                          background: '#fd8451',
+                          boxShadow:
+                            '4px 4px 10px rgba(253,132,81,0.45), -2px -2px 6px rgba(255,255,255,0.6)',
+                        }
+                      : {
+                          background: '#dde8ea',
+                          boxShadow: '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff',
+                        }
+                  }
+                >
+                  <span
+                    className={`text-[9px] font-extrabold uppercase tracking-wider ${
+                      isSelected ? 'text-white/90' : 'text-[#8aa8ab]'
+                    }`}
+                  >
+                    {dayName}
+                  </span>
+                  <span className="text-base font-black leading-tight mt-0.5">
+                    {dayNum}
+                  </span>
+                  <span
+                    className={`text-[9px] font-bold ${
+                      isSelected ? 'text-white/80' : 'text-[#5a7578]'
+                    }`}
+                  >
+                    {monthName}
+                  </span>
+                </button>
+              )
+            })}
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* TIME PERIOD QUICK JUMP TABS & METRICS */}
+        {/* ============================================================== */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5 px-1">
+          {/* Quick Filter Periods */}
+          <div
+            className="p-1 rounded-2xl flex items-center gap-1 overflow-x-auto no-scrollbar"
+            style={{
+              background: '#dde8ea',
+              boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
+            }}
+          >
+            {[
+              { id: 'all', label: 'All 24h (48)', icon: 'schedule' },
+              { id: 'morning', label: 'Morning (6A–12P)', icon: 'wb_twilight' },
+              { id: 'afternoon', label: 'Afternoon (12P–5P)', icon: 'sunny' },
+              { id: 'evening', label: 'Evening (5P–9P)', icon: 'wb_sunny' },
+              { id: 'night', label: 'Night (9P–6A)', icon: 'bedtime' },
+            ].map(tab => {
+              const active = periodFilter === tab.id
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  onClick={() => setPeriodFilter(tab.id as TimePeriodFilter)}
+                  className={`py-1.5 px-2.5 rounded-xl text-[11px] font-extrabold flex items-center gap-1 shrink-0 transition-all ${
+                    active ? 'text-white' : 'text-[#5a7578] hover:text-[#0b3c42]'
+                  }`}
+                  style={
+                    active
+                      ? {
+                          background: '#0b3c42',
+                          boxShadow: '2px 2px 6px rgba(11,60,66,0.3)',
+                        }
+                      : {}
+                  }
+                >
+                  <span className="material-symbols-outlined text-[13px]">{tab.icon}</span>
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
+          </div>
+
+          {/* Slot Availability Legend */}
+          <div className="flex items-center gap-3 text-[11px] font-bold text-[#5a7578] px-1 self-end sm:self-auto">
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-600 inline-block" />
+              <span>{availableCount} Open</span>
+            </span>
+            <span className="flex items-center gap-1">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-600 inline-block" />
+              <span>{bookedCount} Booked</span>
+            </span>
+            {passedCount > 0 && (
+              <span className="flex items-center gap-1 text-[#8aa8ab]">
+                <span className="w-2.5 h-2.5 rounded-full bg-[#b8c6c9] inline-block" />
+                <span>{passedCount} Passed</span>
+              </span>
+            )}
+          </div>
+        </div>
+
+        {/* ============================================================== */}
+        {/* 24-HOUR 30-MIN SLOTS GRID (CALENDLY STYLE WITH CHECKBOXES) */}
+        {/* ============================================================== */}
+        <div
+          className="rounded-3xl p-3 sm:p-4 max-h-[380px] overflow-y-auto flex flex-col gap-2"
+          style={{
+            background: '#dde8ea',
+            boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff',
+          }}
+        >
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
+            {filteredSlots.map(slot => {
+              const isSelected = selectedSlot?.id === slot.id
+              const isPast = slot.isPast
+              const isBooked = slot.isBooked
+              const isAvailable = slot.isAvailable
+
+              // Determine daylight / power state for slot
+              const isPeakSolar = slot.hour24 >= 11 && slot.hour24 <= 15
+              const isNight = slot.hour24 >= 20 || slot.hour24 < 6
+
+              return (
+                <div
+                  key={slot.id}
+                  onClick={() => isAvailable && handleSelectSlot(slot)}
+                  className={`p-3 rounded-2xl flex items-center justify-between gap-2.5 transition-all select-none ${
+                    isPast
+                      ? 'opacity-40 cursor-not-allowed'
+                      : isBooked
+                      ? 'opacity-65 cursor-not-allowed'
+                      : isSelected
+                      ? 'cursor-pointer text-white ring-2 ring-[#fd8451]'
+                      : 'cursor-pointer text-[#0b3c42] hover:scale-[1.01]'
+                  }`}
+                  style={
+                    isSelected
+                      ? {
+                          background: '#0b3c42',
+                          boxShadow: '4px 4px 12px rgba(11,60,66,0.35), -2px -2px 6px #ffffff',
+                        }
+                      : isPast || isBooked
+                      ? {
+                          background: '#d4e0e2',
+                          boxShadow: 'inset 2px 2px 5px #bcc9cc, inset -2px -2px 5px #ffffff',
+                        }
+                      : {
+                          background: '#dde8ea',
+                          boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff',
+                        }
+                  }
+                >
+                  {/* Left: Checkbox Icon & Time Range */}
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {/* Checkbox indicator */}
+                    <div
+                      className={`w-6 h-6 rounded-lg flex items-center justify-center shrink-0 transition-colors ${
+                        isSelected
+                          ? 'bg-[#fd8451] text-white shadow-sm'
+                          : isPast || isBooked
+                          ? 'bg-transparent text-[#8aa8ab]'
+                          : 'bg-[#dde8ea] text-[#8aa8ab]'
+                      }`}
+                      style={
+                        !isSelected
+                          ? {
+                              boxShadow:
+                                'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff',
+                            }
+                          : {}
+                      }
+                    >
+                      <span className="material-symbols-outlined text-[16px]">
+                        {isSelected
+                          ? 'check'
+                          : isPast
+                          ? 'lock_clock'
+                          : isBooked
+                          ? 'block'
+                          : 'schedule'}
+                      </span>
+                    </div>
+
+                    {/* Time Text */}
+                    <div className="flex flex-col min-w-0">
+                      <span
+                        className={`text-xs font-black tracking-tight leading-tight tabular-nums ${
+                          isSelected ? 'text-white' : 'text-[#0b3c42]'
+                        }`}
+                      >
+                        {slot.startTime}
+                      </span>
+                      <span
+                        className={`text-[10px] leading-tight truncate ${
+                          isSelected ? 'text-[#a2ced5]' : 'text-[#5a7578]'
+                        }`}
+                      >
+                        until {slot.endTime}
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Right: Status Pill or Solar Tag */}
+                  <div className="flex flex-col items-end shrink-0">
+                    {isPast ? (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-[#b8c6c9]/40 text-[#5a7578]">
+                        Passed
+                      </span>
+                    ) : isBooked ? (
+                      <span className="text-[9px] font-bold px-2 py-0.5 rounded-full uppercase bg-amber-500/15 text-amber-800">
+                        Booked
+                      </span>
+                    ) : isSelected ? (
+                      <span className="text-[9px] font-extrabold px-2 py-0.5 rounded-full uppercase bg-[#fd8451] text-white flex items-center gap-1">
+                        <span>Selected</span>
+                      </span>
+                    ) : (
+                      <div className="flex items-center gap-1">
+                        {isPeakSolar && (
+                          <span
+                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase text-[#fd8451] flex items-center gap-0.5"
+                            style={{
+                              background: '#dde8ea',
+                              boxShadow:
+                                'inset 1px 1px 2px #b8c6c9, inset -1px -1px 2px #ffffff',
+                            }}
+                            title="Peak Solar Window"
+                          >
+                            <span className="material-symbols-outlined text-[11px]">sunny</span>
+                            <span>Peak</span>
+                          </span>
+                        )}
+                        {isNight && (
+                          <span
+                            className="text-[9px] font-bold px-1.5 py-0.5 rounded-full uppercase text-[#5a7578] flex items-center gap-0.5"
+                            style={{
+                              background: '#dde8ea',
+                              boxShadow:
+                                'inset 1px 1px 2px #b8c6c9, inset -1px -1px 2px #ffffff',
+                            }}
+                            title="100% Inverter Buffer"
+                          >
+                            <span className="material-symbols-outlined text-[11px]">bedtime</span>
+                          </span>
+                        )}
+                        <span className="text-xs font-extrabold text-[#fd8451]">
+                          ₦{bay.rate.toLocaleString()}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+
+          {filteredSlots.length === 0 && (
+            <div className="py-8 flex flex-col items-center justify-center text-center text-xs text-[#5a7578] gap-2">
+              <span className="material-symbols-outlined text-[28px] text-[#8aa8ab]">
+                event_busy
+              </span>
+              <span>No slots in this time window. Try selecting "All 24h" above.</span>
             </div>
           )}
         </div>
 
         {/* ============================================================== */}
-        {/* THE ROTARY WASHER DIAL & DAYLIGHT HORIZON TRACKER */}
+        {/* SELECTED SLOT SUMMARY & CONFIRM CHECKOUT BAR */}
         {/* ============================================================== */}
-        <div
-          className="rounded-3xl p-4 sm:p-5 flex flex-col items-center gap-2 relative overflow-hidden transition-all duration-700"
-          style={{
-            background: skyBackground,
-            boxShadow: 'inset 4px 4px 12px #b0bec0, inset -4px -4px 12px #ffffff',
-          }}
-        >
-          {/* Streamlined Daylight Sky Horizon & Moving Celestial Body */}
-          <div className="w-full flex flex-col items-center gap-1.5 pt-0.5 pb-1">
-            <div className="w-full max-w-xs relative h-7 flex items-center justify-between px-2">
-              {/* Subtle Horizon Guide Track */}
-              <div
-                className="absolute inset-x-8 top-1/2 -translate-y-1/2 h-1 rounded-full pointer-events-none"
-                style={{
-                  background: 'rgba(11,60,66,0.12)',
-                  boxShadow: 'inset 0 1px 2px rgba(0,0,0,0.1)',
-                }}
-              />
-
-              {/* Dynamic Celestial Body (Sun/Moon) smoothly gliding across the horizon */}
-              <div
-                className="absolute w-7 h-7 rounded-full flex items-center justify-center transition-all duration-300 ease-out z-10 -translate-y-1/2 top-1/2"
-                style={{
-                  left: `calc(26px + ${daylightProgress * 100}% * 0.76)`,
-                  background: phaseColor,
-                  color: '#ffffff',
-                  boxShadow: `0 0 12px ${phaseColor}, inset 1px 1px 2px rgba(255,255,255,0.8)`,
-                }}
-                title={dayPhase}
-              >
-                <span className="material-symbols-outlined text-[15px]">{phaseIcon}</span>
-              </div>
-
-              {/* Horizon Anchor Labels */}
-              <span className="relative z-0 text-[10px] font-bold text-[#8aa8ab] uppercase flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[11px]">wb_twilight</span> 7 AM
-              </span>
-
-              <span className="relative z-0 text-[9px] font-extrabold text-[#5a7578] uppercase tracking-wider flex items-center gap-0.5">
-                <span className="material-symbols-outlined text-[12px] text-[#f59e0b]">sunny</span> 12–1 PM
-              </span>
-
-              <span className="relative z-0 text-[10px] font-bold text-[#8aa8ab] uppercase flex items-center gap-0.5">
-                9:30 PM <span className="material-symbols-outlined text-[11px]">bedtime</span>
-              </span>
-            </div>
-
-            {/* Clean Status Pill with Day Phase */}
+        <div className="flex flex-col gap-3 pt-1 border-t border-[#b8c6c9]/40">
+          {selectedSlot ? (
             <div
-              className="px-3.5 py-1 rounded-full flex items-center gap-2 text-xs font-bold text-[#0b3c42]"
+              className="p-3.5 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5"
               style={{
                 background: '#dde8ea',
-                boxShadow: 'inset 2px 2px 4px #b8c6c9, inset -2px -2px 4px #ffffff',
+                boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
               }}
             >
-              <span className="material-symbols-outlined text-[15px]" style={{ color: phaseColor }}>
-                {phaseIcon}
-              </span>
-              <span>{dayPhase}</span>
-              <span className="text-[#8aa8ab]">•</span>
-              <span className="text-[#fd8451] font-extrabold">{currentSlot.startTime}</span>
-            </div>
-          </div>
-
-          {/* ============================================================== */}
-          {/* TACTILE ROTARY WASHER KNOB: PHYSICAL KNURLED MACHINE DIAL */}
-          {/* ============================================================== */}
-          <div className="relative flex items-center justify-center my-2 select-none">
-            <svg
-              ref={dialRef}
-              width="270"
-              height="270"
-              viewBox="0 0 270 270"
-              onPointerDown={handlePointerDown}
-              onPointerMove={handlePointerMove}
-              onPointerUp={handlePointerUp}
-              className="touch-none cursor-grab active:cursor-grabbing"
-              style={{
-                filter: 'drop-shadow(6px 8px 16px #b0bec0) drop-shadow(-6px -6px 14px #ffffff)',
-              }}
-            >
-              <defs>
-                {/* Metallic & Clay Gradients */}
-                <radialGradient id="knobBodyGrad" cx="35%" cy="30%" r="70%">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="45%" stopColor="#dde8ea" />
-                  <stop offset="85%" stopColor="#c5d4d7" />
-                  <stop offset="100%" stopColor="#b4c5c8" />
-                </radialGradient>
-
-                <linearGradient id="bezelGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                  <stop offset="0%" stopColor="#ffffff" />
-                  <stop offset="50%" stopColor="#dde8ea" />
-                  <stop offset="100%" stopColor="#aabdc0" />
-                </linearGradient>
-
-                <linearGradient id="pointerGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-                  <stop offset="0%" stopColor="#ff9a6c" />
-                  <stop offset="100%" stopColor="#ea580c" />
-                </linearGradient>
-
-                <filter id="pointerGlow" x="-20%" y="-20%" width="140%" height="140%">
-                  <feDropShadow dx="0" dy="2" stdDeviation="3" floodColor="#fd8451" floodOpacity="0.65" />
-                </filter>
-              </defs>
-
-              {/* 1. STATIONARY BASE PLATE & GAUGE FACE */}
-              <circle
-                cx={cx}
-                cy={cy}
-                r="126"
-                fill="#dde8ea"
-                stroke="#c2d1d4"
-                strokeWidth="1.5"
-              />
-
-              {/* Recessed guide track channel */}
-              <circle
-                cx={cx}
-                cy={cy}
-                r="115"
-                fill="none"
-                stroke="rgba(11,60,66,0.14)"
-                strokeWidth="14"
-                strokeDasharray="478"
-                strokeDashoffset="119"
-                transform={`rotate(135 ${cx} ${cy})`}
-                strokeLinecap="round"
-              />
-
-              {/* Stationary Slot Ticks etched into base plate */}
-              {daySlots.map((slot, i) => {
-                const angleDeg = -135 + i * stepAngle
-                const rad = ((angleDeg - 90) * Math.PI) / 180
-                const isSelected = i === safeIndex
-
-                // Inner and outer coordinates for radial tick marks
-                const rInner = isSelected ? 108 : 110
-                const rOuter = isSelected ? 122 : 118
-                const x1 = cx + rInner * Math.cos(rad)
-                const y1 = cy + rInner * Math.sin(rad)
-                const x2 = cx + rOuter * Math.cos(rad)
-                const y2 = cy + rOuter * Math.sin(rad)
-
-                return (
-                  <g
-                    key={slot.id}
-                    className="cursor-pointer"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      setSelectedSlotIndex(i)
-                    }}
-                  >
-                    {/* Tick Mark Line */}
-                    <line
-                      x1={x1}
-                      y1={y1}
-                      x2={x2}
-                      y2={y2}
-                      stroke={
-                        isSelected
-                          ? '#fd8451'
-                          : !slot.isAvailable
-                          ? '#0b3c42'
-                          : '#8aa8ab'
-                      }
-                      strokeWidth={isSelected ? 4 : 2}
-                      strokeLinecap="round"
-                      style={
-                        isSelected
-                          ? { filter: 'drop-shadow(0px 0px 4px rgba(253,132,81,0.8))' }
-                          : {}
-                      }
-                    />
-
-                    {/* Luminous Pip on Active Slot */}
-                    {isSelected && (
-                      <circle
-                        cx={x2}
-                        cy={y2}
-                        r="3.5"
-                        fill="#ffffff"
-                        stroke="#fd8451"
-                        strokeWidth="1.5"
-                      />
-                    )}
-                  </g>
-                )
-              })}
-
-              {/* Arc Range Labels (Start & End markers) */}
-              <text
-                x="32"
-                y="218"
-                fill="#8aa8ab"
-                fontSize="9"
-                fontWeight="800"
-                fontFamily="sans-serif"
-                transform="rotate(-25 32 218)"
-              >
-                MIN
-              </text>
-              <text
-                x="214"
-                y="218"
-                fill="#8aa8ab"
-                fontSize="9"
-                fontWeight="800"
-                fontFamily="sans-serif"
-                transform="rotate(25 214 218)"
-              >
-                MAX
-              </text>
-
-              {/* 2. ROTATING CYLINDRICAL WASHER KNOB (Physically turns with touch/drag) */}
-              <g
-                transform={`rotate(${activeAngleDeg} ${cx} ${cy})`}
-                style={{
-                  transition: isDragging.current
-                    ? 'none'
-                    : 'transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1)',
-                  transformOrigin: `${cx}px ${cy}px`,
-                }}
-              >
-                {/* Outer Knob Rim with Chamfer */}
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r="103"
-                  fill="url(#knobBodyGrad)"
-                  stroke="url(#bezelGrad)"
-                  strokeWidth="2.5"
+              <div className="flex items-center gap-3">
+                <div
+                  className="w-10 h-10 rounded-xl flex items-center justify-center text-white shrink-0"
                   style={{
-                    filter: 'drop-shadow(0 4px 10px rgba(11,60,66,0.18))',
+                    background: '#fd8451',
+                    boxShadow: '2px 2px 6px rgba(253,132,81,0.4)',
                   }}
-                />
+                >
+                  <span className="material-symbols-outlined text-[20px]">check_circle</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="text-[10px] font-extrabold uppercase tracking-wider text-[#8aa8ab]">
+                    Selected Booking Window
+                  </span>
+                  <div className="text-xs sm:text-sm font-extrabold text-[#0b3c42] flex items-center gap-1.5 flex-wrap">
+                    <span>{selectedSlot.dayLabel}</span>
+                    <span>•</span>
+                    <span className="text-[#fd8451]">{selectedSlot.timeLabel}</span>
+                  </div>
+                  <span className="text-[10px] text-[#5a7578] mt-0.5">
+                    30-Min Inverter Wash + 10-Min Grace Unload Buffer
+                  </span>
+                </div>
+              </div>
 
-                {/* Tactile Knurled Grip Ridges (36 grooves around perimeter) */}
-                {Array.from({ length: 36 }).map((_, idx) => {
-                  const ridgeAngle = (idx * 360) / 36
-                  const rad = ((ridgeAngle - 90) * Math.PI) / 180
-                  const r1 = 92
-                  const r2 = 101
-                  const rx1 = cx + r1 * Math.cos(rad)
-                  const ry1 = cy + r1 * Math.sin(rad)
-                  const rx2 = cx + r2 * Math.cos(rad)
-                  const ry2 = cy + r2 * Math.sin(rad)
-                  return (
-                    <line
-                      key={idx}
-                      x1={rx1}
-                      y1={ry1}
-                      x2={rx2}
-                      y2={ry2}
-                      stroke="rgba(11,60,66,0.22)"
-                      strokeWidth="2.5"
-                      strokeLinecap="round"
-                    />
-                  )
-                })}
-
-                {/* Inner Stepped Bezel Ring */}
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r="89"
-                  fill="#dde8ea"
-                  stroke="#c5d4d7"
-                  strokeWidth="2"
-                />
-
-                {/* Concentric Tactile Grip Ring Groove */}
-                <circle
-                  cx={cx}
-                  cy={cy}
-                  r="78"
-                  fill="none"
-                  stroke="rgba(11,60,66,0.12)"
-                  strokeWidth="3"
-                  strokeDasharray="6 4"
-                />
-
-                {/* THE ROTATING POINTER NOTCH (Pointing directly outward at active slot) */}
-                {/* Precision Pointer Needle Housing */}
-                <path
-                  d={`M ${cx - 7} ${cy - 80} L ${cx} ${cy - 108} L ${cx + 7} ${cy - 80} Z`}
-                  fill="url(#pointerGrad)"
-                  filter="url(#pointerGlow)"
-                  stroke="#ffffff"
-                  strokeWidth="1.5"
-                />
-
-                {/* Luminous Center Indicator Notch */}
-                <line
-                  x1={cx}
-                  y1={cy - 82}
-                  x2={cx}
-                  y2={cy - 106}
-                  stroke="#ffffff"
-                  strokeWidth="2.5"
-                  strokeLinecap="round"
-                />
-
-                {/* Micro LED Dot on Pointer */}
-                <circle
-                  cx={cx}
-                  cy={cy - 92}
-                  r="2.5"
-                  fill="#ffffff"
-                />
-              </g>
-
-              {/* 3. FIXED DIGITAL OLED TELEMETRY SCREEN (Centered Hub, stays upright) */}
-              {/* Outer Chamfer Ring for Center Portal */}
-              <circle
-                cx={cx}
-                cy={cy}
-                r="66"
-                fill="#dde8ea"
-                stroke="#b8c6c9"
-                strokeWidth="2"
-              />
-
-              {/* Recessed Dark OLED Glass Portal */}
-              <circle
-                cx={cx}
-                cy={cy}
-                r="63"
-                fill="#052226"
-                stroke="rgba(162, 206, 213, 0.3)"
-                strokeWidth="1.5"
-                style={{
-                  filter: 'drop-shadow(inset 0 3px 8px rgba(0,0,0,0.7))',
-                }}
-              />
-
-              {/* Inner Decorative Dial Ring */}
-              <circle
-                cx={cx}
-                cy={cy}
-                r="56"
-                fill="none"
-                stroke="rgba(253, 132, 81, 0.2)"
-                strokeWidth="1"
-                strokeDasharray="3 3"
-              />
-            </svg>
-
-            {/* FIXED CENTER DIGITAL DISPLAY CONTENT (HTML overlay for ultra-crisp typography) */}
+              <div className="flex flex-col sm:items-end w-full sm:w-auto border-t sm:border-t-0 pt-2 sm:pt-0 border-[#b8c6c9]/30">
+                <span className="text-[10px] uppercase font-bold text-[#8aa8ab]">
+                  Rate
+                </span>
+                <span className="text-base font-black text-[#fd8451]">
+                  ₦{bay.rate.toLocaleString()}
+                </span>
+              </div>
+            </div>
+          ) : (
             <div
-              className="absolute w-30 h-30 rounded-full flex flex-col items-center justify-center text-center p-2 pointer-events-none z-20"
+              className="p-3 rounded-xl text-center text-xs font-semibold text-[#5a7578]"
               style={{
-                color: '#ffffff',
+                background: '#dde8ea',
+                boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
               }}
             >
-              {/* Day Phase Mini Badge */}
-              <div className="flex items-center gap-1 text-[9px] font-extrabold uppercase tracking-wider text-[#a2ced5]">
-                <span className="material-symbols-outlined text-[11px]" style={{ color: phaseColor }}>
-                  {phaseIcon}
-                </span>
-                <span>{dayPhase.split(' ')[0]}</span>
-              </div>
-
-              {/* Large Digital Clock Display */}
-              <span className="text-lg font-black leading-tight text-white tabular-nums tracking-tight mt-0.5">
-                {currentSlot.startTime}
-              </span>
-
-              {/* Cycle Subtitle */}
-              <span className="text-[9px] text-[#a2ced5] font-semibold leading-none mt-0.5">
-                30m Cycle
-              </span>
-
-              {/* Availability Badge */}
-              <span
-                className={`text-[8px] font-extrabold uppercase px-2 py-0.5 rounded-full mt-1.5 flex items-center gap-1 ${
-                  !currentSlot.isAvailable
-                    ? 'bg-red-950/80 text-red-300 border border-red-500/30'
-                    : 'bg-emerald-950/80 text-emerald-300 border border-emerald-500/30'
-                }`}
-              >
-                <span
-                  className={`w-1.5 h-1.5 rounded-full ${
-                    !currentSlot.isAvailable ? 'bg-red-400' : 'bg-emerald-400 animate-pulse'
-                  }`}
-                />
-                <span>{!currentSlot.isAvailable ? 'Booked' : 'Available'}</span>
-              </span>
-
-              {/* Drag Affordance Micro Hint */}
-              <div className="flex items-center gap-0.5 text-[7px] text-[#fd8451] uppercase font-black mt-1 tracking-widest">
-                <span>ROTATE KNOB</span>
-              </div>
+              Please pick any available 30-minute time slot from the schedule above.
             </div>
-          </div>
+          )}
 
-          {/* Stepper Controls & Slot Index */}
-          <div className="flex items-center gap-3 w-full justify-between px-2 pt-1">
-            <button
-              type="button"
-              disabled={safeIndex === 0}
-              onClick={() => setSelectedSlotIndex(prev => Math.max(0, prev - 1))}
-              className="py-2 px-3.5 rounded-full text-xs font-bold text-[#0b3c42] flex items-center gap-1 transition-all disabled:opacity-40"
-              style={{ background: '#dde8ea', boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff' }}
-            >
-              <span className="material-symbols-outlined text-[16px]">chevron_left</span>
-              <span>-30 Mins</span>
-            </button>
-
-            <span className="text-[11px] font-bold text-[#5a7578] text-center">
-              Drag dial or tap pips • {safeIndex + 1}/{totalSlots}
-            </span>
-
-            <button
-              type="button"
-              disabled={safeIndex === totalSlots - 1}
-              onClick={() => setSelectedSlotIndex(prev => Math.min(totalSlots - 1, prev + 1))}
-              className="py-2 px-3.5 rounded-full text-xs font-bold text-[#0b3c42] flex items-center gap-1 transition-all disabled:opacity-40"
-              style={{ background: '#dde8ea', boxShadow: '3px 3px 8px #b8c6c9, -3px -3px 8px #ffffff' }}
-            >
-              <span>+30 Mins</span>
-              <span className="material-symbols-outlined text-[16px]">chevron_right</span>
-            </button>
-          </div>
-        </div>
-
-        {/* Selected Slot Information Card (30-min Cycle + 10-min Buffer) */}
-        <div
-          className="rounded-2xl p-3.5 flex flex-col gap-2"
-          style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 8px #b8c6c9, inset -3px -3px 8px #ffffff' }}
-        >
-          <div className="flex items-center justify-between text-xs">
-            <span className="font-extrabold text-[#0b3c42] flex items-center gap-1.5">
-              <span className="material-symbols-outlined text-[16px] text-[#fd8451]">schedule</span>
-              {currentSlot.timeLabel} ({selectedDay === 'today' ? 'Today' : 'Tomorrow'})
-            </span>
-            <span
-              className={`text-[10px] font-extrabold uppercase px-2.5 py-0.5 rounded-full ${
-                currentSlot.isPast
-                  ? 'text-[#8aa8ab]'
-                  : !currentSlot.isAvailable
-                  ? 'text-red-700'
-                  : 'text-emerald-700'
-              }`}
-              style={{ background: '#dde8ea', boxShadow: 'inset 1px 1px 3px #b8c6c9, inset -1px -1px 3px #ffffff' }}
-            >
-              {currentSlot.isPast ? 'Slot Ended' : !currentSlot.isAvailable ? 'Taken by Another Student' : 'Open for Booking'}
-            </span>
-          </div>
-
-          <div
-            className="w-full h-7 rounded-full p-0.5 flex gap-1 items-center"
-            style={{ background: '#dde8ea', boxShadow: 'inset 2px 2px 5px #b0bec0, inset -2px -2px 5px #ffffff' }}
-          >
-            <div
-              className="h-full rounded-l-full flex items-center justify-center text-[10px] font-extrabold text-white px-2 tracking-wide"
-              style={{ width: '75%', background: '#0b3c42' }}
-            >
-              <span>30m Wash</span>
-            </div>
-            <div
-              className="h-full rounded-r-full flex items-center justify-center text-[10px] font-extrabold text-white px-2 tracking-wide"
-              style={{ width: '25%', background: '#fd8451' }}
-            >
-              <span>10m Unload Buffer</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Detergent Addon Checkbox - Commented out as requested */}
-        {/*
-        <label
-          className="rounded-2xl p-3 flex items-center justify-between cursor-pointer transition-all select-none"
-          style={{ background: '#dde8ea', boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff' }}
-        >
-          <div className="flex items-center gap-3">
-            <input
-              type="checkbox"
-              checked={addDetergent}
-              onChange={e => setAddDetergent(e.target.checked)}
-              className="w-4 h-4 rounded text-[#0b3c42] accent-[#fd8451] cursor-pointer"
-            />
-            <div>
-              <div className="text-[12px] font-bold text-[#0b3c42] flex items-center gap-1.5">
-                <span className="material-symbols-outlined text-[16px] text-[#fd8451]">soap</span>
-                <span>Add Detergent Pod + Softener Kit</span>
-              </div>
-              <div className="text-[10px] text-[#5a7578]">Automatic chamber release inside drum</div>
-            </div>
-          </div>
-          <span className="text-xs font-extrabold text-[#fd8451]">+₦200</span>
-        </label>
-        */}
-
-        {/* Pricing Summary & Checkout Button */}
-        <div className="flex flex-col gap-2.5 pt-1 border-t border-[#b8c6c9]/40">
-          <div className="flex items-center justify-between text-sm font-extrabold text-[#0b3c42]">
-            <span>Total Payable ({selectedDay === 'today' ? 'Today' : 'Tomorrow'})</span>
-            <span className="text-lg text-[#fd8451]">₦{finalPrice.toLocaleString()}</span>
-          </div>
-
+          {/* Checkout CTA */}
           <button
             type="button"
-            disabled={!currentSlot.isAvailable || currentSlot.isPast || isProcessing}
-            onClick={handlePay}
-            className="w-full py-3.5 rounded-full flex items-center justify-center gap-2 transition-all font-bold text-white text-sm"
+            disabled={!selectedSlot || !selectedSlot.isAvailable || isProcessing}
+            onClick={handleConfirm}
+            className={`w-full py-3.5 px-4 rounded-full flex items-center justify-center gap-2 font-bold text-white text-sm transition-all active:scale-98 ${
+              !selectedSlot || !selectedSlot.isAvailable || isProcessing
+                ? 'opacity-50 cursor-not-allowed'
+                : ''
+            }`}
             style={{
               background: '#fd8451',
-              boxShadow: '5px 5px 14px rgba(253,132,81,0.45), -3px -3px 8px rgba(255,255,255,0.5)',
-              opacity: (!currentSlot.isAvailable || currentSlot.isPast || isProcessing) ? 0.45 : 1,
-              cursor: (!currentSlot.isAvailable || currentSlot.isPast) ? 'not-allowed' : 'pointer',
+              boxShadow:
+                '5px 5px 14px rgba(253,132,81,0.45), -3px -3px 8px rgba(255,255,255,0.5)',
             }}
           >
             <span className="material-symbols-outlined text-[18px]">key</span>
             <span>
               {isProcessing
-                ? 'Securing Slot & Keypad PIN…'
-                : currentSlot.isPast
-                ? 'Select an Upcoming Slot'
-                : !currentSlot.isAvailable
-                ? 'Slot Already Booked'
-                : `Pay ₦${finalPrice.toLocaleString()} for ${currentSlot.startTime}`}
+                ? 'Reserving Slot & Generating Keypad PIN…'
+                : selectedSlot
+                ? `Confirm & Pay ₦${bay.rate.toLocaleString()} for ${selectedSlot.startTime}`
+                : 'Select an Available Slot to Continue'}
             </span>
           </button>
         </div>
