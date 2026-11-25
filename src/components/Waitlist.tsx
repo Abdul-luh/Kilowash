@@ -4,7 +4,7 @@ import { NIGERIAN_INSTITUTIONS } from '../data/institutions'
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string
 
 const TARGET_SIGNUPS = 1000
-const BASE_SIGNUPS = 199 // Next signup hits 200 / 1,000 (20.0%)
+const BASE_SIGNUPS = 199 // Signing up brings it to 200 / 1,000 (20%)
 const STORAGE_KEY = 'kilowash_waitlist_v1'
 
 interface SavedWaitlistState {
@@ -37,7 +37,6 @@ export default function Waitlist() {
   const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
-  // Launch meter & referral states
   const [extraSignups, setExtraSignups] = useState<number>(0)
   const [savedUser, setSavedUser] = useState<SavedWaitlistState | null>(null)
   const [referredBy, setReferredBy] = useState<string | null>(null)
@@ -46,15 +45,12 @@ export default function Waitlist() {
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Hydrate referral param & any existing signup from localStorage
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const params = new URLSearchParams(window.location.search)
     const ref = params.get('ref')
-    if (ref) {
-      setReferredBy(ref)
-    }
+    if (ref) setReferredBy(ref)
 
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
@@ -71,11 +67,9 @@ export default function Waitlist() {
     }
   }, [])
 
-  const currentSignups = BASE_SIGNUPS + extraSignups
-  const launchPercentage = Math.min(100, Number(((currentSignups / TARGET_SIGNUPS) * 100).toFixed(1)))
-  const remainingSignups = Math.max(0, TARGET_SIGNUPS - currentSignups)
+  const currentSignups = BASE_SIGNUPS + (extraSignups || 1)
+  const launchPercentage = Math.min(100, Math.round((currentSignups / TARGET_SIGNUPS) * 100))
 
-  // Smoothly animate gauge when entering 'done' state
   useEffect(() => {
     if (status !== 'done') {
       setAnimatedPct(0)
@@ -84,32 +78,25 @@ export default function Waitlist() {
 
     let rafId: number
     const start = performance.now()
-    const duration = 850
-    const target = launchPercentage
+    const duration = 750
 
     const tick = (now: number) => {
-      const elapsed = now - start
-      const progress = Math.min(1, elapsed / duration)
-      // Cubic ease-out
+      const progress = Math.min(1, (now - start) / duration)
       const eased = 1 - Math.pow(1 - progress, 3)
-      setAnimatedPct(Number((target * eased).toFixed(1)))
-      if (progress < 1) {
-        rafId = requestAnimationFrame(tick)
-      }
+      setAnimatedPct(Math.round(launchPercentage * eased))
+      if (progress < 1) rafId = requestAnimationFrame(tick)
     }
 
     rafId = requestAnimationFrame(tick)
     return () => cancelAnimationFrame(rafId)
   }, [status, launchPercentage])
 
-  // Filter institutions based on input search query
   const filteredInstitutions = useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
     if (!q) return NIGERIAN_INSTITUTIONS.slice(0, 40)
     return NIGERIAN_INSTITUTIONS.filter(inst => inst.toLowerCase().includes(q))
   }, [searchQuery])
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -168,9 +155,8 @@ export default function Waitlist() {
 
     const generatedCode = generateReferralCode(cleanEmail)
 
-    // Fallback gracefully in local preview if no Web3Forms key is configured
     if (!WEB3FORMS_KEY) {
-      await new Promise(resolve => setTimeout(resolve, 450))
+      await new Promise(resolve => setTimeout(resolve, 400))
       completeSignup(cleanEmail, finalSchool)
       return
     }
@@ -204,49 +190,22 @@ export default function Waitlist() {
     : `${shareOrigin}/#waitlist`
 
   const campusLabel = savedUser?.school || 'campus'
-  const shareMessage = `No more hostel laundry stress — I just joined the Kilowash waitlist to bring solar-powered 30-min washes to ${campusLabel}! We're at ${launchPercentage}% of the ${TARGET_SIGNUPS.toLocaleString()} signups needed for them to launch. Add your name so we hit 100% faster: ${referralUrl}`
+  const shareMessage = `I just joined the Kilowash waitlist to bring solar-powered 30-min laundry machines to ${campusLabel}. We're at ${launchPercentage}% of the 1,000 signups needed to launch — add your name here: ${referralUrl}`
 
   function handleCopyLink() {
     if (navigator.clipboard) {
       navigator.clipboard.writeText(referralUrl)
       setCopiedLink(true)
-      setTimeout(() => setCopiedLink(false), 2200)
+      setTimeout(() => setCopiedLink(false), 2000)
     }
   }
 
   function handleWhatsAppShare() {
-    const url = `https://wa.me/?text=${encodeURIComponent(shareMessage)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
-  function handleXShare() {
-    const tweet = `Just joined the @kilowash waitlist to bring solar-powered 30-min laundry bays to ${campusLabel}! ⚡\n\nWe're at ${launchPercentage}% (${currentSignups}/${TARGET_SIGNUPS.toLocaleString()}) of the signups needed to launch. Help us hit 100%:`
-    const url = `https://twitter.com/intent/tweet?text=${encodeURIComponent(tweet)}&url=${encodeURIComponent(referralUrl)}`
-    window.open(url, '_blank', 'noopener,noreferrer')
-  }
-
-  async function handleNativeShare() {
-    if (typeof navigator !== 'undefined' && navigator.share) {
-      try {
-        await navigator.share({
-          title: 'Kilowash Campus Launch Waitlist',
-          text: `We're at ${launchPercentage}% of the ${TARGET_SIGNUPS.toLocaleString()} signups needed to bring Kilowash solar laundry bays to ${campusLabel}. Join here:`,
-          url: referralUrl,
-        })
-        return
-      } catch {
-        // User cancelled or share failed; fall back to copy
-      }
-    }
-    handleCopyLink()
-  }
-
-  function handleResetForm() {
-    setEmail('')
-    setSearchQuery('')
-    setSelectedSchool('')
-    setCustomSchool('')
-    setStatus('idle')
+    window.open(
+      `https://wa.me/?text=${encodeURIComponent(shareMessage)}`,
+      '_blank',
+      'noopener,noreferrer'
+    )
   }
 
   return (
@@ -278,7 +237,7 @@ export default function Waitlist() {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10">
-            {/* Left copy */}
+            {/* Left copy — kept clean and airy */}
             <div className="flex flex-col gap-6">
               <div
                 className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-full"
@@ -293,7 +252,7 @@ export default function Waitlist() {
                 }}
               >
                 <span className="material-symbols-outlined text-[14px]">sensors</span>
-                Launching at {TARGET_SIGNUPS.toLocaleString()} Signups
+                Launching Soon
               </div>
 
               <h2
@@ -309,87 +268,12 @@ export default function Waitlist() {
               </h2>
 
               <p style={{ fontSize: '14px', lineHeight: 1.75, color: '#5a7578' }}>
-                Drop your email and campus. Once we hit{' '}
-                <strong style={{ color: '#0b3c42' }}>1,000 student signups</strong>, we deploy
-                the first solar washing bays — and everyone on the waitlist gets priority slot
-                access for launch week.
+                Drop your email and campus. We will notify you the moment Kilowash machines go
+                live at your hostel — and you will get priority slot access for the first week.
               </p>
 
-              {/* Compact Pre-Signup Launch Progress Bar */}
-              <div
-                className="rounded-2xl p-4 sm:p-5 flex flex-col gap-2.5"
-                style={{
-                  background: '#dde8ea',
-                  boxShadow: 'inset 4px 4px 10px #b8c6c9, inset -4px -4px 10px #ffffff',
-                }}
-              >
-                <div className="flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-2 h-2 rounded-full inline-block"
-                      style={{
-                        background: '#fd8451',
-                        boxShadow: '0 0 8px rgba(253,132,81,0.7)',
-                      }}
-                    />
-                    <span
-                      style={{
-                        fontSize: '11px',
-                        fontWeight: 800,
-                        letterSpacing: '0.06em',
-                        textTransform: 'uppercase',
-                        color: '#0b3c42',
-                      }}
-                    >
-                      Launch Likelihood
-                    </span>
-                  </div>
-                  <span
-                    className="tabular-nums"
-                    style={{
-                      fontSize: '15px',
-                      fontWeight: 800,
-                      color: '#fd8451',
-                      letterSpacing: '-0.02em',
-                    }}
-                  >
-                    {launchPercentage.toFixed(1)}%
-                  </span>
-                </div>
-
-                {/* Recessed progress bar */}
-                <div
-                  className="w-full h-3 rounded-full overflow-hidden p-0.5"
-                  style={{
-                    background: '#dde8ea',
-                    boxShadow: 'inset 2px 2px 5px #b0bec0, inset -2px -2px 5px #ffffff',
-                  }}
-                >
-                  <div
-                    className="h-full rounded-full transition-all duration-700 ease-out"
-                    style={{
-                      width: `${Math.max(4, launchPercentage)}%`,
-                      background: 'linear-gradient(90deg, #0b3c42 0%, #fd8451 100%)',
-                      boxShadow: '0 1px 4px rgba(253,132,81,0.45)',
-                    }}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between text-[11px] font-semibold text-[#5a7578]">
-                  <span>
-                    <strong className="text-[#0b3c42] tabular-nums">
-                      {currentSignups.toLocaleString()}
-                    </strong>{' '}
-                    / {TARGET_SIGNUPS.toLocaleString()} students joined
-                  </span>
-                  <span className="text-[#8aa8ab] tabular-nums">
-                    {remainingSignups.toLocaleString()} left to launch
-                  </span>
-                </div>
-              </div>
-
               {/* Stats — inset trays in responsive 3-column grid */}
-              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-1">
+              <div className="grid grid-cols-3 gap-2 sm:gap-4 pt-2">
                 {[
                   { num: 'All', label: 'Campuses eligible' },
                   { num: '₦1,500', label: 'Per 30-min cycle' },
@@ -422,9 +306,9 @@ export default function Waitlist() {
               </div>
             </div>
 
-            {/* Right form / Post-signup launch & share card — inset panel */}
+            {/* Right panel — inset */}
             <div
-              className="rounded-2xl p-5 sm:p-8"
+              className="rounded-2xl p-6 sm:p-8"
               style={{
                 background: '#dde8ea',
                 boxShadow: 'inset 5px 5px 14px #b8c6c9, inset -5px -5px 14px #ffffff',
@@ -432,290 +316,144 @@ export default function Waitlist() {
             >
               {status === 'done' ? (
                 <div
-                  className="flex flex-col gap-5"
+                  className="text-center py-4 sm:py-6 flex flex-col items-center gap-6"
                   style={{ animation: 'slideUp 0.45s cubic-bezier(.22,1,.36,1) both' }}
                 >
-                  {/* Top confirmation row */}
-                  <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className="w-12 h-12 rounded-2xl flex items-center justify-center shrink-0"
-                        style={{
-                          background: '#dde8ea',
-                          boxShadow: '4px 4px 10px #b8c6c9, -4px -4px 10px #ffffff',
-                        }}
-                      >
-                        <span
-                          className="material-symbols-outlined text-[26px]"
-                          style={{ color: '#fd8451' }}
-                        >
-                          verified
-                        </span>
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <h3
-                            style={{
-                              fontWeight: 800,
-                              fontSize: '1.2rem',
-                              color: '#0b3c42',
-                              letterSpacing: '-0.02em',
-                            }}
-                          >
-                            You&apos;re in!
-                          </h3>
-                          <span
-                            className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase tracking-wider tabular-nums"
-                            style={{
-                              background: 'rgba(253, 132, 81, 0.14)',
-                              color: '#fd8451',
-                            }}
-                          >
-                            Spot #{savedUser?.signupNumber ?? currentSignups}
-                          </span>
-                        </div>
-                        {savedUser?.school && (
-                          <p className="text-xs font-semibold text-[#5a7578] truncate mt-0.5">
-                            {savedUser.school}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Hero Launch Likelihood Meter Card */}
-                  <div
-                    className="rounded-2xl p-4 sm:p-5 text-white flex flex-col gap-3.5"
-                    style={{
-                      background: '#0b3c42',
-                      boxShadow:
-                        'inset 3px 3px 8px rgba(0,0,0,0.45), inset -2px -2px 6px rgba(255,255,255,0.08)',
-                    }}
-                  >
-                    <div className="flex items-end justify-between gap-2">
-                      <div>
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-[#8aa8ab] block">
-                          How Likely We Launch Now
-                        </span>
-                        <div className="flex items-baseline gap-2 mt-0.5">
-                          <span className="text-3xl sm:text-4xl font-extrabold tracking-tight text-white tabular-nums">
-                            {animatedPct.toFixed(1)}%
-                          </span>
-                          <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 text-[10px] font-extrabold tracking-wide">
-                            +0.1% from you
-                          </span>
-                        </div>
-                      </div>
-
-                      <div className="text-right">
-                        <span className="text-[10px] uppercase font-bold tracking-wider text-[#8aa8ab] block">
-                          Goal Target
-                        </span>
-                        <span className="text-sm font-extrabold text-[#fd8451] tabular-nums">
-                          {currentSignups.toLocaleString()} / {TARGET_SIGNUPS.toLocaleString()}
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Progress Bar with Milestone Ticks */}
-                    <div className="flex flex-col gap-1.5">
-                      <div
-                        className="w-full h-3.5 rounded-full overflow-hidden p-0.5 relative"
-                        style={{
-                          background: 'rgba(0, 0, 0, 0.35)',
-                          boxShadow: 'inset 1px 2px 4px rgba(0,0,0,0.5)',
-                        }}
-                      >
-                        <div
-                          className="h-full rounded-full transition-all duration-700 ease-out"
-                          style={{
-                            width: `${Math.max(4, animatedPct)}%`,
-                            background: 'linear-gradient(90deg, #fd8451 0%, #ffb599 100%)',
-                            boxShadow: '0 0 10px rgba(253, 132, 81, 0.65)',
-                          }}
-                        />
-                      </div>
-
-                      <div className="flex items-center justify-between text-[9px] font-bold uppercase tracking-wider text-[#8aa8ab] tabular-nums px-0.5">
-                        <span>0%</span>
-                        <span>25%</span>
-                        <span>50%</span>
-                        <span>75%</span>
-                        <span className="text-[#fd8451]">100% Launch</span>
-                      </div>
-                    </div>
-
-                    <p className="text-xs leading-relaxed text-[#cde0e3]">
-                      We actually install the machines once we hit{' '}
-                      <strong className="text-white">
-                        {TARGET_SIGNUPS.toLocaleString()} signups
-                      </strong>{' '}
-                      ({remainingSignups.toLocaleString()} left). Share this with your hostel
-                      mates so we go live faster!
-                    </p>
-                  </div>
-
-                  {/* Personal Referral Link Copy Box */}
-                  <div className="flex flex-col gap-2">
-                    <div className="flex items-center justify-between">
+                  {/* Verified Icon + Heading */}
+                  <div className="flex flex-col items-center gap-3">
+                    <div
+                      className="w-14 h-14 rounded-2xl flex items-center justify-center"
+                      style={{
+                        background: '#dde8ea',
+                        boxShadow: '5px 5px 12px #b8c6c9, -5px -5px 12px #ffffff',
+                      }}
+                    >
                       <span
+                        className="material-symbols-outlined text-[28px]"
+                        style={{ color: '#fd8451' }}
+                      >
+                        verified
+                      </span>
+                    </div>
+
+                    <div>
+                      <h3 style={{ fontWeight: 800, fontSize: '1.35rem', color: '#0b3c42' }}>
+                        You are in.
+                      </h3>
+                      <p
+                        className="max-w-sm mx-auto mt-1.5"
+                        style={{ fontSize: '13px', color: '#5a7578', lineHeight: 1.65 }}
+                      >
+                        We launch once we hit{' '}
+                        <strong style={{ color: '#0b3c42' }}>1,000 signups</strong>. Share with
+                        your hostel mates so we go live faster.
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Single Clean Launch Meter */}
+                  <div className="w-full max-w-sm flex flex-col gap-2.5">
+                    <div className="flex items-baseline justify-between px-1">
+                      <span
+                        className="tabular-nums"
                         style={{
-                          fontSize: '10px',
+                          fontSize: '1.5rem',
                           fontWeight: 800,
-                          letterSpacing: '0.08em',
-                          textTransform: 'uppercase',
-                          color: '#5a7578',
+                          color: '#0b3c42',
+                          letterSpacing: '-0.03em',
+                          lineHeight: 1,
                         }}
                       >
-                        Your Invite Link
+                        {animatedPct}%{' '}
+                        <span
+                          style={{
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            color: '#5a7578',
+                            letterSpacing: '0',
+                          }}
+                        >
+                          to launch
+                        </span>
                       </span>
-                      <span className="text-[10px] font-bold text-[#fd8451]">
-                        Each friend = +0.1% closer
+                      <span
+                        className="tabular-nums"
+                        style={{ fontSize: '12px', fontWeight: 700, color: '#8aa8ab' }}
+                      >
+                        {currentSignups.toLocaleString()} / {TARGET_SIGNUPS.toLocaleString()}
                       </span>
                     </div>
 
                     <div
-                      className="flex items-center justify-between gap-2 pl-3.5 pr-1.5 py-1.5 rounded-xl"
+                      className="w-full h-3.5 rounded-full p-0.5 overflow-hidden"
                       style={{
                         background: '#dde8ea',
-                        boxShadow: 'inset 3px 3px 7px #b8c6c9, inset -3px -3px 7px #ffffff',
+                        boxShadow: 'inset 3px 3px 6px #b8c6c9, inset -3px -3px 6px #ffffff',
                       }}
                     >
-                      <span className="text-xs font-semibold text-[#0b3c42] truncate select-all min-w-0">
-                        {referralUrl}
-                      </span>
-                      <button
-                        type="button"
-                        onClick={handleCopyLink}
-                        className="px-3.5 py-2 rounded-lg text-xs font-bold flex items-center gap-1.5 shrink-0 transition-all active:scale-95"
+                      <div
+                        className="h-full rounded-full transition-all duration-700 ease-out"
                         style={{
-                          background: copiedLink ? '#0b3c42' : '#dde8ea',
-                          color: copiedLink ? '#ffffff' : '#0b3c42',
-                          boxShadow: copiedLink
-                            ? '2px 2px 6px rgba(11,60,66,0.35)'
-                            : '3px 3px 7px #b8c6c9, -3px -3px 7px #ffffff',
+                          width: `${Math.max(4, animatedPct)}%`,
+                          background: '#fd8451',
                         }}
-                      >
-                        <span className="material-symbols-outlined text-[15px]">
-                          {copiedLink ? 'check' : 'content_copy'}
-                        </span>
-                        <span>{copiedLink ? 'Copied!' : 'Copy'}</span>
-                      </button>
+                      />
                     </div>
                   </div>
 
-                  {/* Primary Share Buttons */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {/* Two Clean Share Pills */}
+                  <div className="w-full max-w-sm flex flex-col sm:flex-row gap-3">
                     <button
                       type="button"
                       onClick={handleWhatsAppShare}
-                      className="w-full py-3.5 px-4 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95"
+                      className="flex-1 py-3.5 px-5 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95"
                       style={{
                         background: '#fd8451',
                         boxShadow:
-                          '4px 4px 12px rgba(253,132,81,0.45), -2px -2px 6px rgba(255,255,255,0.55)',
-                        fontSize: '12px',
-                        fontWeight: 800,
+                          '5px 5px 12px rgba(253,132,81,0.42), -3px -3px 8px rgba(255,255,255,0.55)',
+                        fontSize: '13px',
+                        fontWeight: 700,
                         color: '#ffffff',
                       }}
                     >
-                      <span className="material-symbols-outlined text-[17px]">forum</span>
+                      <span className="material-symbols-outlined text-[17px]">share</span>
                       <span>Share on WhatsApp</span>
                     </button>
 
-                    <div className="grid grid-cols-2 gap-2.5">
-                      <button
-                        type="button"
-                        onClick={handleXShare}
-                        className="py-3.5 px-3 rounded-full flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                        style={{
-                          background: '#dde8ea',
-                          boxShadow: '4px 4px 10px #b8c6c9, -4px -4px 10px #ffffff',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          color: '#0b3c42',
-                        }}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-[#0b3c42]">
-                          tag
-                        </span>
-                        <span>Post on X</span>
-                      </button>
-
-                      <button
-                        type="button"
-                        onClick={handleNativeShare}
-                        className="py-3.5 px-3 rounded-full flex items-center justify-center gap-1.5 transition-all active:scale-95"
-                        style={{
-                          background: '#dde8ea',
-                          boxShadow: '4px 4px 10px #b8c6c9, -4px -4px 10px #ffffff',
-                          fontSize: '12px',
-                          fontWeight: 800,
-                          color: '#0b3c42',
-                        }}
-                      >
-                        <span className="material-symbols-outlined text-[16px] text-[#fd8451]">
-                          ios_share
-                        </span>
-                        <span>Share</span>
-                      </button>
-                    </div>
-                  </div>
-
-                  {/* Bonus Referral Perk Strip */}
-                  <div
-                    className="px-3.5 py-2.5 rounded-xl flex items-center gap-2.5"
-                    style={{
-                      background: '#dde8ea',
-                      boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
-                    }}
-                  >
-                    <span
-                      className="material-symbols-outlined text-[18px] shrink-0"
-                      style={{ color: '#fd8451' }}
-                    >
-                      redeem
-                    </span>
-                    <span className="text-[11px] font-semibold text-[#5a7578] leading-snug">
-                      Invite <strong className="text-[#0b3c42]">3 hostel mates</strong> with
-                      your link and get <strong className="text-[#0b3c42]">1 free wash</strong>{' '}
-                      when your campus goes live.
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={handleResetForm}
-                    className="self-center text-[11px] font-semibold text-[#8aa8ab] hover:text-[#0b3c42] transition-colors"
-                  >
-                    Register another student email
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-                  {referredBy && (
-                    <div
-                      className="px-3.5 py-2.5 rounded-xl flex items-center gap-2"
+                    <button
+                      type="button"
+                      onClick={handleCopyLink}
+                      className="sm:w-auto py-3.5 px-5 rounded-full flex items-center justify-center gap-2 transition-all active:scale-95"
                       style={{
-                        background: 'rgba(253, 132, 81, 0.12)',
-                        fontSize: '11px',
-                        color: '#0b3c42',
+                        background: '#dde8ea',
+                        boxShadow: '4px 4px 10px #b8c6c9, -4px -4px 10px #ffffff',
+                        fontSize: '13px',
                         fontWeight: 700,
+                        color: '#0b3c42',
                       }}
                     >
                       <span
-                        className="material-symbols-outlined text-[16px]"
-                        style={{ color: '#fd8451' }}
+                        className="material-symbols-outlined text-[17px]"
+                        style={{ color: copiedLink ? '#0E8A5E' : '#fd8451' }}
                       >
-                        group_add
+                        {copiedLink ? 'check' : 'link'}
                       </span>
-                      <span>
-                        Invited by <strong>@{referredBy}</strong> — sign up to boost campus
-                        launch progress!
-                      </span>
-                    </div>
-                  )}
+                      <span>{copiedLink ? 'Copied!' : 'Copy Link'}</span>
+                    </button>
+                  </div>
 
+                  {import.meta.env.DEV && (
+                    <button
+                      type="button"
+                      onClick={() => setStatus('idle')}
+                      className="text-[11px] font-medium text-[#8aa8ab] hover:text-[#0b3c42] transition-colors"
+                    >
+                      Back to form
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="flex flex-col gap-5">
                   {status === 'error' && (
                     <div
                       className="px-4 py-3 rounded-xl"
@@ -729,7 +467,6 @@ export default function Waitlist() {
                       Something went wrong. Please try again.
                     </div>
                   )}
-
                   <div>
                     <div
                       style={{
@@ -871,7 +608,6 @@ export default function Waitlist() {
                             border: '1px solid rgba(184, 198, 201, 0.4)',
                           }}
                         >
-                          {/* Option to type custom if query doesn't match */}
                           {searchQuery.trim() &&
                             !filteredInstitutions.some(
                               i => i.toLowerCase() === searchQuery.trim().toLowerCase()
@@ -931,7 +667,6 @@ export default function Waitlist() {
                             </div>
                           )}
 
-                          {/* Explicit "Other / My School is not listed" option */}
                           <div className="pt-1 border-t border-[#b8c6c9]/30 mt-1">
                             <button
                               type="button"
@@ -955,7 +690,6 @@ export default function Waitlist() {
                     </div>
                   </div>
 
-                  {/* Fallback custom input when 'Other' is explicitly selected */}
                   {selectedSchool === 'Other' && (
                     <div className="flex flex-col gap-1.5 animate-fadeIn">
                       <label
@@ -1023,37 +757,28 @@ export default function Waitlist() {
                     )}
                   </button>
 
-                  <div className="flex flex-col items-center gap-1.5">
-                    <p style={{ fontSize: '11px', color: '#8aa8ab', textAlign: 'center' }}>
-                      No spam. Just a single notification when we hit 1,000 signups &amp; go live.
-                    </p>
-                    {savedUser ? (
-                      <button
-                        type="button"
-                        onClick={() => setStatus('done')}
-                        className="text-[11px] font-bold text-[#fd8451] hover:underline"
-                      >
-                        View your referral link &amp; launch progress →
-                      </button>
-                    ) : (
-                      import.meta.env.DEV && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            completeSignup(
-                              email.trim() || 'student@campus.edu.ng',
-                              selectedSchool === 'Other'
-                                ? customSchool.trim() || 'Lagos State University (LASU)'
-                                : selectedSchool || searchQuery.trim() || 'Lagos State University (LASU)'
-                            )
-                          }
-                          className="text-[10px] font-semibold text-[#8aa8ab] hover:text-[#fd8451] transition-colors"
-                        >
-                          [Dev Preview: See post-signup launch meter]
-                        </button>
-                      )
-                    )}
-                  </div>
+                  <p style={{ fontSize: '11px', color: '#8aa8ab', textAlign: 'center' }}>
+                    No spam. Just a single notification when your campus goes live.
+                  </p>
+
+                  {import.meta.env.DEV && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        completeSignup(
+                          email.trim() || 'student@campus.edu.ng',
+                          selectedSchool === 'Other'
+                            ? customSchool.trim() || 'Lagos State University (LASU)'
+                            : selectedSchool ||
+                                searchQuery.trim() ||
+                                'Lagos State University (LASU)'
+                        )
+                      }
+                      className="self-center text-[10px] font-medium text-[#8aa8ab] hover:text-[#fd8451] transition-colors -mt-2"
+                    >
+                      Preview post-signup
+                    </button>
+                  )}
                 </form>
               )}
             </div>
