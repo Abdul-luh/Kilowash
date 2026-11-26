@@ -5,13 +5,67 @@ const SHEET_WEBAPP_URL = import.meta.env.VITE_WAITLIST_SHEET_URL as string | und
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined
 
 const TARGET_SIGNUPS = 1000
-const STORAGE_KEY = 'kilowash_waitlist_live_v1'
+// Verified unique waitlist + campus survey signups (LASU), excluding test accounts
+const SEEDED_EMAILS = new Set([
+  'abdulazeezjide13@gmail.com',
+  'abdurrasheedkhabbab@gmail.com',
+  'ade206182@gmail.com',
+  'adeaayat2706@gmail.com',
+  'adeolah0328@gmail.com',
+  'adexlr8@gmail.com',
+  'afolabioluwadabira83@gmail.com',
+  'ayetobaoladimeji@gmail.com',
+  'balogunsewey4@gmail.com',
+  'basitolokunola@gmail.com',
+  'bellofuhad200@gmail.com',
+  'benedictbanjo00@gmail.com',
+  'daviesprecious202@gmail.com',
+  'erinfolamizainab67@gmail.com',
+  'faosideenolowolagba@gmail.com',
+  'giftayomikun76@gmail.com',
+  'ifeoluwaojuroye2005@gmail.com',
+  'israelcabala06@gmail.com',
+  'kennyclassical4real@gmail.com',
+  'koikiafusattaiwo@gmail.com',
+  'kolapotaofeek4@gmail.com',
+  'makinderidwan0@gmail.com',
+  'mathewsedicity@gmail.com',
+  'mayowayusuf3004@gmail.com',
+  'mimirunsewe96@gmail.com',
+  'mojereolamichael1@gmail.com',
+  'mujeebsanni679@gmail.com',
+  'mutmainnahgiwa@gmail.com',
+  'nurudeenolumegbon1@gmail.com',
+  'odogiyonm@gmail.com',
+  'ojugbelelateef2006@gmail.com',
+  'okehabeeboluwatobiloba@gmail.com',
+  'oladiposamuel1708@gmail.com',
+  'olugasarah84@gmail.com',
+  'omoleeniola2@gmail.com',
+  'owolabititobi452@gmail.com',
+  'preciousfuwa14@gmail.com',
+  'savagehush007@gmail.com',
+  'slamsbaba005@gmail.com',
+  'taiwoireoluwakunmi@gmail.com',
+  'trustypeter16@gmail.com',
+  'uthmanfathiu8@gmail.com',
+  'wabimbola9@gmail.com',
+  'wareezahoyeshola05@gmail.com',
+  'yusufhalimah78@gmail.com',
+])
+const INITIAL_VERIFIED_COUNT = SEEDED_EMAILS.size // 45
+const STORAGE_KEY = 'kilowash_waitlist_live_v2'
 
 interface SavedWaitlistState {
   email: string
   school: string
   referralCode: string
   lastKnownCount: number
+}
+
+function isExcludedTestEmail(emailStr: string): boolean {
+  const e = emailStr.trim().toLowerCase()
+  return e.startsWith('lagbaj') || e.includes('odulate')
 }
 
 function generateReferralCode(emailStr: string): string {
@@ -42,7 +96,7 @@ export default function Waitlist() {
   const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
-  const [liveCount, setLiveCount] = useState<number>(0)
+  const [liveCount, setLiveCount] = useState<number>(INITIAL_VERIFIED_COUNT)
   const [savedUser, setSavedUser] = useState<SavedWaitlistState | null>(null)
   const [referredBy, setReferredBy] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -50,7 +104,6 @@ export default function Waitlist() {
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Hydrate referral URL param, saved user, and fetch latest real count from Google Sheets
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -66,7 +119,7 @@ export default function Waitlist() {
         if (parsed?.email && parsed?.referralCode) {
           restoredUser = parsed
           setSavedUser(parsed)
-          setLiveCount(parsed.lastKnownCount || 1)
+          setLiveCount(Math.max(INITIAL_VERIFIED_COUNT, parsed.lastKnownCount || 0))
           setStatus('done')
         }
       }
@@ -79,9 +132,10 @@ export default function Waitlist() {
         .then(res => res.json())
         .then((data: { ok?: boolean; count?: number }) => {
           if (data?.ok && typeof data.count === 'number') {
-            setLiveCount(data.count)
+            const countFromSheet = Math.max(INITIAL_VERIFIED_COUNT, data.count)
+            setLiveCount(countFromSheet)
             if (restoredUser) {
-              const updated = { ...restoredUser, lastKnownCount: data.count }
+              const updated = { ...restoredUser, lastKnownCount: countFromSheet }
               setSavedUser(updated)
               try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -92,7 +146,7 @@ export default function Waitlist() {
           }
         })
         .catch(() => {
-          // Keep cached count if offline
+          // Keep verified baseline count if offline
         })
     }
   }, [])
@@ -175,15 +229,16 @@ export default function Waitlist() {
       selectedSchool === 'Other'
         ? customSchool.trim()
         : selectedSchool || searchQuery.trim()
-    const cleanEmail = email.trim()
+    const cleanEmail = email.trim().toLowerCase()
 
     if (!cleanEmail || !finalSchool) return
     setStatus('loading')
 
     const generatedCode = generateReferralCode(cleanEmail)
+    const isExcluded = isExcludedTestEmail(cleanEmail)
 
     // Optional background email notification via Web3Forms if configured
-    if (WEB3FORMS_KEY) {
+    if (WEB3FORMS_KEY && !isExcluded) {
       fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
@@ -200,7 +255,6 @@ export default function Waitlist() {
     // Primary live storage & count via Google Sheets Web App
     if (SHEET_WEBAPP_URL) {
       try {
-        // Use text/plain to avoid CORS preflight OPTIONS request on Google Apps Script
         const res = await fetch(SHEET_WEBAPP_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
@@ -213,7 +267,11 @@ export default function Waitlist() {
         })
         const data = (await res.json()) as { ok?: boolean; count?: number }
         if (data?.ok && typeof data.count === 'number') {
-          finalizeSignup(cleanEmail, finalSchool, data.count)
+          finalizeSignup(
+            cleanEmail,
+            finalSchool,
+            Math.max(INITIAL_VERIFIED_COUNT, data.count)
+          )
           return
         }
         setStatus('error')
@@ -223,12 +281,10 @@ export default function Waitlist() {
       return
     }
 
-    // Fallback if neither URL is configured yet
-    if (WEB3FORMS_KEY) {
-      finalizeSignup(cleanEmail, finalSchool, liveCount + 1)
-    } else {
-      setStatus('error')
-    }
+    // Fallback using verified baseline + local deduplication before Sheet URL is added
+    const shouldIncrement = !isExcluded && !SEEDED_EMAILS.has(cleanEmail)
+    const nextCount = shouldIncrement ? liveCount + 1 : liveCount
+    finalizeSignup(cleanEmail, finalSchool, nextCount)
   }
 
   const shareOrigin =
@@ -400,7 +456,7 @@ export default function Waitlist() {
                     </div>
                   </div>
 
-                  {/* Single Clean Launch Meter (Live Google Sheets Data) */}
+                  {/* Single Clean Launch Meter (Actual Waitlist + Survey Data) */}
                   <div className="w-full max-w-sm flex flex-col gap-2.5">
                     <div className="flex items-baseline justify-between px-1">
                       <span
@@ -443,7 +499,7 @@ export default function Waitlist() {
                       <div
                         className="h-full rounded-full transition-all duration-700 ease-out"
                         style={{
-                          width: `${liveCount > 0 ? Math.max(2, animatedPct) : 0}%`,
+                          width: `${liveCount > 0 ? Math.max(2.5, animatedPct) : 0}%`,
                           background: '#fd8451',
                         }}
                       />
@@ -809,6 +865,22 @@ export default function Waitlist() {
                   <p style={{ fontSize: '11px', color: '#8aa8ab', textAlign: 'center' }}>
                     No spam. Just a single notification when your campus goes live.
                   </p>
+
+                  {import.meta.env.DEV && (
+                    <button
+                      type="button"
+                      onClick={() =>
+                        finalizeSignup(
+                          'lagbaj@gmail.com',
+                          'Lagos State University (LASU)',
+                          liveCount
+                        )
+                      }
+                      className="self-center text-[10px] font-medium text-[#8aa8ab] hover:text-[#fd8451] transition-colors -mt-2"
+                    >
+                      Preview post-signup ({liveCount} / 1,000)
+                    </button>
+                  )}
                 </form>
               )}
             </div>
