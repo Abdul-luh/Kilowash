@@ -1,17 +1,17 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { NIGERIAN_INSTITUTIONS } from '../data/institutions'
 
-const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string
+const SHEET_WEBAPP_URL = import.meta.env.VITE_WAITLIST_SHEET_URL as string | undefined
+const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined
 
 const TARGET_SIGNUPS = 1000
-const BASE_SIGNUPS = 199 // Signing up brings it to 200 / 1,000 (20%)
-const STORAGE_KEY = 'kilowash_waitlist_v1'
+const STORAGE_KEY = 'kilowash_waitlist_live_v1'
 
 interface SavedWaitlistState {
   email: string
   school: string
   referralCode: string
-  signupNumber: number
+  lastKnownCount: number
 }
 
 function generateReferralCode(emailStr: string): string {
@@ -29,6 +29,11 @@ function generateReferralCode(emailStr: string): string {
   return `${prefix}${digits}`
 }
 
+function formatPct(value: number): string {
+  const rounded = Number(value.toFixed(1))
+  return Number.isInteger(rounded) ? String(rounded) : rounded.toFixed(1)
+}
+
 export default function Waitlist() {
   const [email, setEmail] = useState('')
   const [searchQuery, setSearchQuery] = useState('')
@@ -37,7 +42,7 @@ export default function Waitlist() {
   const [isOpen, setIsOpen] = useState(false)
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
-  const [extraSignups, setExtraSignups] = useState<number>(0)
+  const [liveCount, setLiveCount] = useState<number>(0)
   const [savedUser, setSavedUser] = useState<SavedWaitlistState | null>(null)
   const [referredBy, setReferredBy] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -45,6 +50,7 @@ export default function Waitlist() {
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Hydrate referral URL param, saved user, and fetch latest real count from Google Sheets
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -52,23 +58,46 @@ export default function Waitlist() {
     const ref = params.get('ref')
     if (ref) setReferredBy(ref)
 
+    let restoredUser: SavedWaitlistState | null = null
     try {
       const raw = localStorage.getItem(STORAGE_KEY)
       if (raw) {
-        const parsed = JSON.parse(raw) as SavedWaitlistState & { extraCount?: number }
+        const parsed = JSON.parse(raw) as SavedWaitlistState
         if (parsed?.email && parsed?.referralCode) {
+          restoredUser = parsed
           setSavedUser(parsed)
-          setExtraSignups(parsed.extraCount ?? 1)
+          setLiveCount(parsed.lastKnownCount || 1)
           setStatus('done')
         }
       }
     } catch {
       // Ignore storage errors
     }
+
+    if (SHEET_WEBAPP_URL) {
+      fetch(SHEET_WEBAPP_URL)
+        .then(res => res.json())
+        .then((data: { ok?: boolean; count?: number }) => {
+          if (data?.ok && typeof data.count === 'number') {
+            setLiveCount(data.count)
+            if (restoredUser) {
+              const updated = { ...restoredUser, lastKnownCount: data.count }
+              setSavedUser(updated)
+              try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+              } catch {
+                // Ignore storage errors
+              }
+            }
+          }
+        })
+        .catch(() => {
+          // Keep cached count if offline
+        })
+    }
   }, [])
 
-  const currentSignups = BASE_SIGNUPS + (extraSignups || 1)
-  const launchPercentage = Math.min(100, Math.round((currentSignups / TARGET_SIGNUPS) * 100))
+  const launchPercentage = Math.min(100, (liveCount / TARGET_SIGNUPS) * 100)
 
   useEffect(() => {
     if (status !== 'done') {
@@ -78,12 +107,12 @@ export default function Waitlist() {
 
     let rafId: number
     const start = performance.now()
-    const duration = 750
+    const duration = 700
 
     const tick = (now: number) => {
       const progress = Math.min(1, (now - start) / duration)
       const eased = 1 - Math.pow(1 - progress, 3)
-      setAnimatedPct(Math.round(launchPercentage * eased))
+      setAnimatedPct(launchPercentage * eased)
       if (progress < 1) rafId = requestAnimationFrame(tick)
     }
 
@@ -120,23 +149,21 @@ export default function Waitlist() {
     setIsOpen(false)
   }
 
-  function completeSignup(cleanEmail: string, finalSchool: string) {
-    const nextExtra = extraSignups + 1
-    const signupNumber = BASE_SIGNUPS + nextExtra
+  function finalizeSignup(cleanEmail: string, finalSchool: string, totalCount: number) {
     const referralCode = generateReferralCode(cleanEmail)
     const entry: SavedWaitlistState = {
       email: cleanEmail,
       school: finalSchool,
       referralCode,
-      signupNumber,
+      lastKnownCount: totalCount,
     }
 
-    setExtraSignups(nextExtra)
+    setLiveCount(totalCount)
     setSavedUser(entry)
     setStatus('done')
 
     try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ ...entry, extraCount: nextExtra }))
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(entry))
     } catch {
       // Ignore storage errors
     }
@@ -155,14 +182,9 @@ export default function Waitlist() {
 
     const generatedCode = generateReferralCode(cleanEmail)
 
-    if (!WEB3FORMS_KEY) {
-      await new Promise(resolve => setTimeout(resolve, 400))
-      completeSignup(cleanEmail, finalSchool)
-      return
-    }
-
-    try {
-      const res = await fetch('https://api.web3forms.com/submit', {
+    // Optional background email notification via Web3Forms if configured
+    if (WEB3FORMS_KEY) {
+      fetch('https://api.web3forms.com/submit', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
         body: JSON.stringify({
@@ -172,13 +194,39 @@ export default function Waitlist() {
           referral_code: generatedCode,
           ...(referredBy ? { referred_by: referredBy } : {}),
         }),
-      })
-      if (res.ok) {
-        completeSignup(cleanEmail, finalSchool)
-      } else {
+      }).catch(() => {})
+    }
+
+    // Primary live storage & count via Google Sheets Web App
+    if (SHEET_WEBAPP_URL) {
+      try {
+        // Use text/plain to avoid CORS preflight OPTIONS request on Google Apps Script
+        const res = await fetch(SHEET_WEBAPP_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            email: cleanEmail,
+            school: finalSchool,
+            referralCode: generatedCode,
+            referredBy: referredBy || '',
+          }),
+        })
+        const data = (await res.json()) as { ok?: boolean; count?: number }
+        if (data?.ok && typeof data.count === 'number') {
+          finalizeSignup(cleanEmail, finalSchool, data.count)
+          return
+        }
+        setStatus('error')
+      } catch {
         setStatus('error')
       }
-    } catch {
+      return
+    }
+
+    // Fallback if neither URL is configured yet
+    if (WEB3FORMS_KEY) {
+      finalizeSignup(cleanEmail, finalSchool, liveCount + 1)
+    } else {
       setStatus('error')
     }
   }
@@ -190,7 +238,8 @@ export default function Waitlist() {
     : `${shareOrigin}/#waitlist`
 
   const campusLabel = savedUser?.school || 'campus'
-  const shareMessage = `I just joined the Kilowash waitlist to bring solar-powered 30-min laundry machines to ${campusLabel}. We're at ${launchPercentage}% of the 1,000 signups needed to launch — add your name here: ${referralUrl}`
+  const pctLabel = formatPct(launchPercentage)
+  const shareMessage = `I just joined the Kilowash waitlist to bring solar-powered 30-min laundry machines to ${campusLabel}. We're at ${pctLabel}% (${liveCount.toLocaleString()}/1,000) of the signups needed to launch — add your name here: ${referralUrl}`
 
   function handleCopyLink() {
     if (navigator.clipboard) {
@@ -237,7 +286,7 @@ export default function Waitlist() {
           />
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-12 items-center relative z-10">
-            {/* Left copy — kept clean and airy */}
+            {/* Left copy */}
             <div className="flex flex-col gap-6">
               <div
                 className="inline-flex items-center gap-2 self-start px-4 py-2 rounded-full"
@@ -351,7 +400,7 @@ export default function Waitlist() {
                     </div>
                   </div>
 
-                  {/* Single Clean Launch Meter */}
+                  {/* Single Clean Launch Meter (Live Google Sheets Data) */}
                   <div className="w-full max-w-sm flex flex-col gap-2.5">
                     <div className="flex items-baseline justify-between px-1">
                       <span
@@ -364,7 +413,7 @@ export default function Waitlist() {
                           lineHeight: 1,
                         }}
                       >
-                        {animatedPct}%{' '}
+                        {formatPct(animatedPct)}%{' '}
                         <span
                           style={{
                             fontSize: '12px',
@@ -380,7 +429,7 @@ export default function Waitlist() {
                         className="tabular-nums"
                         style={{ fontSize: '12px', fontWeight: 700, color: '#8aa8ab' }}
                       >
-                        {currentSignups.toLocaleString()} / {TARGET_SIGNUPS.toLocaleString()}
+                        {liveCount.toLocaleString()} / {TARGET_SIGNUPS.toLocaleString()}
                       </span>
                     </div>
 
@@ -394,7 +443,7 @@ export default function Waitlist() {
                       <div
                         className="h-full rounded-full transition-all duration-700 ease-out"
                         style={{
-                          width: `${Math.max(4, animatedPct)}%`,
+                          width: `${liveCount > 0 ? Math.max(2, animatedPct) : 0}%`,
                           background: '#fd8451',
                         }}
                       />
@@ -760,25 +809,6 @@ export default function Waitlist() {
                   <p style={{ fontSize: '11px', color: '#8aa8ab', textAlign: 'center' }}>
                     No spam. Just a single notification when your campus goes live.
                   </p>
-
-                  {import.meta.env.DEV && (
-                    <button
-                      type="button"
-                      onClick={() =>
-                        completeSignup(
-                          email.trim() || 'student@campus.edu.ng',
-                          selectedSchool === 'Other'
-                            ? customSchool.trim() || 'Lagos State University (LASU)'
-                            : selectedSchool ||
-                                searchQuery.trim() ||
-                                'Lagos State University (LASU)'
-                        )
-                      }
-                      className="self-center text-[10px] font-medium text-[#8aa8ab] hover:text-[#fd8451] transition-colors -mt-2"
-                    >
-                      Preview post-signup
-                    </button>
-                  )}
                 </form>
               )}
             </div>
