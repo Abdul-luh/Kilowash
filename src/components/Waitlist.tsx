@@ -1,62 +1,14 @@
 import { useState, useRef, useEffect, useMemo } from 'react'
 import { NIGERIAN_INSTITUTIONS } from '../data/institutions'
+import {
+  INITIAL_VERIFIED_COUNT,
+  REFERRAL_GOAL,
+  TARGET_SIGNUPS,
+  getWaitlistStats,
+  submitWaitlistSignup,
+} from '../lib/waitlistApi'
 
-const SHEET_WEBAPP_URL = import.meta.env.VITE_WAITLIST_SHEET_URL as string | undefined
-const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined
-
-const TARGET_SIGNUPS = 1000
-const REFERRAL_GOAL = 3
-
-// Verified unique waitlist + campus survey signups (LASU), excluding test accounts
-const SEEDED_EMAILS = new Set([
-  'abdulazeezjide13@gmail.com',
-  'abdurrasheedkhabbab@gmail.com',
-  'ade206182@gmail.com',
-  'adeaayat2706@gmail.com',
-  'adeolah0328@gmail.com',
-  'adexlr8@gmail.com',
-  'afolabioluwadabira83@gmail.com',
-  'ayetobaoladimeji@gmail.com',
-  'balogunsewey4@gmail.com',
-  'basitolokunola@gmail.com',
-  'bellofuhad200@gmail.com',
-  'benedictbanjo00@gmail.com',
-  'daviesprecious202@gmail.com',
-  'erinfolamizainab67@gmail.com',
-  'faosideenolowolagba@gmail.com',
-  'giftayomikun76@gmail.com',
-  'ifeoluwaojuroye2005@gmail.com',
-  'israelcabala06@gmail.com',
-  'kennyclassical4real@gmail.com',
-  'koikiafusattaiwo@gmail.com',
-  'kolapotaofeek4@gmail.com',
-  'makinderidwan0@gmail.com',
-  'mathewsedicity@gmail.com',
-  'mayowayusuf3004@gmail.com',
-  'mimirunsewe96@gmail.com',
-  'mojereolamichael1@gmail.com',
-  'mujeebsanni679@gmail.com',
-  'mutmainnahgiwa@gmail.com',
-  'nurudeenolumegbon1@gmail.com',
-  'odogiyonm@gmail.com',
-  'ojugbelelateef2006@gmail.com',
-  'okehabeeboluwatobiloba@gmail.com',
-  'oladiposamuel1708@gmail.com',
-  'olugasarah84@gmail.com',
-  'omoleeniola2@gmail.com',
-  'owolabititobi452@gmail.com',
-  'preciousfuwa14@gmail.com',
-  'savagehush007@gmail.com',
-  'slamsbaba005@gmail.com',
-  'taiwoireoluwakunmi@gmail.com',
-  'trustypeter16@gmail.com',
-  'uthmanfathiu8@gmail.com',
-  'wabimbola9@gmail.com',
-  'wareezahoyeshola05@gmail.com',
-  'yusufhalimah78@gmail.com',
-])
-const INITIAL_VERIFIED_COUNT = SEEDED_EMAILS.size // 45
-const STORAGE_KEY = 'kilowash_waitlist_live_v3'
+const STORAGE_KEY = 'kilowash_waitlist_v4'
 
 interface SavedWaitlistState {
   email: string
@@ -64,35 +16,6 @@ interface SavedWaitlistState {
   referralCode: string
   lastKnownCount: number
   myReferrals: number
-}
-
-interface SheetApiResponse {
-  ok?: boolean
-  count?: number
-  referralCode?: string
-  myReferrals?: number
-  referralGoal?: number
-  rewardUnlocked?: boolean
-}
-
-function isExcludedTestEmail(emailStr: string): boolean {
-  const e = emailStr.trim().toLowerCase()
-  return e.startsWith('lagbaj') || e.includes('odulate')
-}
-
-function generateReferralCode(emailStr: string): string {
-  const prefix =
-    emailStr
-      .split('@')[0]
-      .replace(/[^a-zA-Z0-9]/g, '')
-      .toLowerCase()
-      .slice(0, 8) || 'student'
-  let hash = 0
-  for (let i = 0; i < emailStr.length; i++) {
-    hash = (hash * 31 + emailStr.charCodeAt(i)) % 900
-  }
-  const digits = String((Math.abs(hash) % 900) + 100)
-  return `${prefix}${digits}`
 }
 
 function formatPct(value: number): string {
@@ -117,7 +40,6 @@ export default function Waitlist() {
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
-  // Hydrate referral param, saved session, and sync live total + personal referral count
   useEffect(() => {
     if (typeof window === 'undefined') return
 
@@ -144,42 +66,27 @@ export default function Waitlist() {
       // Ignore storage errors
     }
 
-    if (SHEET_WEBAPP_URL) {
-      const query = restoredUser?.referralCode
-        ? `?code=${encodeURIComponent(restoredUser.referralCode)}`
-        : ''
-      fetch(`${SHEET_WEBAPP_URL}${query}`)
-        .then(res => res.json())
-        .then((data: SheetApiResponse) => {
-          if (data?.ok && typeof data.count === 'number') {
-            const countFromSheet = Math.max(INITIAL_VERIFIED_COUNT, data.count)
-            const refsFromSheet =
-              typeof data.myReferrals === 'number'
-                ? data.myReferrals
-                : restoredUser?.myReferrals || 0
-            setLiveCount(countFromSheet)
-            setMyReferrals(refsFromSheet)
-
-            if (restoredUser) {
-              const updated: SavedWaitlistState = {
-                ...restoredUser,
-                referralCode: data.referralCode || restoredUser.referralCode,
-                lastKnownCount: countFromSheet,
-                myReferrals: refsFromSheet,
-              }
-              setSavedUser(updated)
-              try {
-                localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
-              } catch {
-                // Ignore storage errors
-              }
-            }
+    getWaitlistStats(restoredUser?.referralCode)
+      .then(stats => {
+        if (!stats) return
+        setLiveCount(stats.count)
+        if (restoredUser) {
+          setMyReferrals(stats.myReferrals)
+          const updated: SavedWaitlistState = {
+            ...restoredUser,
+            referralCode: stats.referralCode || restoredUser.referralCode,
+            lastKnownCount: stats.count,
+            myReferrals: stats.myReferrals,
           }
-        })
-        .catch(() => {
-          // Keep cached count if offline
-        })
-    }
+          setSavedUser(updated)
+          try {
+            localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
+          } catch {
+            // Ignore storage errors
+          }
+        }
+      })
+      .catch(() => {})
   }, [])
 
   const launchPercentage = Math.min(100, (liveCount / TARGET_SIGNUPS) * 100)
@@ -235,14 +142,13 @@ export default function Waitlist() {
     setIsOpen(false)
   }
 
-  function finalizeSignup(
+  function persistSuccess(
     cleanEmail: string,
     finalSchool: string,
     totalCount: number,
-    resolvedCode?: string,
-    referralCount = 0
+    referralCode: string,
+    referralCount: number
   ) {
-    const referralCode = resolvedCode || generateReferralCode(cleanEmail)
     const entry: SavedWaitlistState = {
       email: cleanEmail,
       school: finalSchool,
@@ -274,61 +180,23 @@ export default function Waitlist() {
     if (!cleanEmail || !finalSchool) return
     setStatus('loading')
 
-    const generatedCode = generateReferralCode(cleanEmail)
-    const isExcluded = isExcludedTestEmail(cleanEmail)
-    const safeReferredBy =
-      referredBy && referredBy !== generatedCode ? referredBy : ''
-
-    // Optional background email notification via Web3Forms if configured
-    if (WEB3FORMS_KEY && !isExcluded) {
-      fetch('https://api.web3forms.com/submit', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-        body: JSON.stringify({
-          access_key: WEB3FORMS_KEY,
-          email: cleanEmail,
-          school: finalSchool,
-          referral_code: generatedCode,
-          ...(safeReferredBy ? { referred_by: safeReferredBy } : {}),
-        }),
-      }).catch(() => {})
+    try {
+      const result = await submitWaitlistSignup({
+        email: cleanEmail,
+        school: finalSchool,
+        referredBy,
+        fallbackCurrentCount: liveCount,
+      })
+      persistSuccess(
+        cleanEmail,
+        finalSchool,
+        result.count,
+        result.referralCode,
+        result.myReferrals
+      )
+    } catch {
+      setStatus('error')
     }
-
-    // Primary live storage & referral tracking via Google Sheets Web App
-    if (SHEET_WEBAPP_URL) {
-      try {
-        const res = await fetch(SHEET_WEBAPP_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            email: cleanEmail,
-            school: finalSchool,
-            referralCode: generatedCode,
-            referredBy: safeReferredBy,
-          }),
-        })
-        const data = (await res.json()) as SheetApiResponse
-        if (data?.ok && typeof data.count === 'number') {
-          finalizeSignup(
-            cleanEmail,
-            finalSchool,
-            Math.max(INITIAL_VERIFIED_COUNT, data.count),
-            data.referralCode || generatedCode,
-            data.myReferrals || 0
-          )
-          return
-        }
-        setStatus('error')
-      } catch {
-        setStatus('error')
-      }
-      return
-    }
-
-    // Fallback using verified baseline + local deduplication before Sheet URL is added
-    const shouldIncrement = !isExcluded && !SEEDED_EMAILS.has(cleanEmail)
-    const nextCount = shouldIncrement ? liveCount + 1 : liveCount
-    finalizeSignup(cleanEmail, finalSchool, nextCount, generatedCode, 0)
   }
 
   const shareOrigin =
@@ -501,7 +369,7 @@ export default function Waitlist() {
                     </div>
                   </div>
 
-                  {/* Launch Meter + Compact 3-Step Referral Pill */}
+                  {/* Launch Meter + Compact 3-Step Referral Row */}
                   <div className="w-full max-w-sm flex flex-col gap-3">
                     <div className="flex flex-col gap-2">
                       <div className="flex items-baseline justify-between px-1">
@@ -963,7 +831,7 @@ export default function Waitlist() {
                     <button
                       type="button"
                       onClick={() =>
-                        finalizeSignup(
+                        persistSuccess(
                           'lagbaj@gmail.com',
                           'Lagos State University (LASU)',
                           liveCount,
