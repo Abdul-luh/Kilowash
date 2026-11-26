@@ -1,26 +1,40 @@
 /**
- * Kilowash Waitlist — Google Sheets Backend (Google Apps Script)
+ * Kilowash Waitlist + Referral System — Google Sheets Backend (Google Apps Script)
  * Pre-seeded with the 45 verified LASU waitlist + survey signups.
+ *
+ * REFERRAL RULES:
+ * - Every student gets a unique Referral Code (e.g. `savagehu923`).
+ * - When a friend signs up via `?ref=<code>`, `Referred By` records `<code>`.
+ * - Self-referrals, duplicate emails, and test emails (`lagbaj*`, `*odulate*`) are ignored.
+ * - 3 verified referrals = 1 Free Wash unlocked at campus launch (tracked live in Cols F & G).
+ * - Returning students who re-enter their email get their existing code + live referral count.
  *
  * HOW TO DEPLOY (takes ~60 seconds):
  * 1. Open a blank Google Sheet (https://sheets.new).
  * 2. Click Extensions → Apps Script.
  * 3. Replace everything in Code.gs with this file and click Save (Ctrl+S).
- * 4. (Optional) Select `seedSheet` in the top toolbar and click Run once to populate
- *    the 45 existing signups immediately — otherwise they auto-populate on the first request.
- * 5. Click Deploy → New deployment → Web app:
+ * 4. Click Deploy → New deployment → Web app:
  *    - Execute as: "Me"
  *    - Who has access: "Anyone"
- * 6. Copy the Web app URL (ends in /exec) into .env.local:
+ * 5. Copy the Web app URL (ends in /exec) into .env.local:
  *    VITE_WAITLIST_SHEET_URL=https://script.google.com/macros/s/YOUR_SCRIPT_ID/exec
  */
 
 const SHEET_NAME = 'Waitlist';
-const HEADERS = ['Timestamp', 'Email', 'School', 'Referral Code', 'Referred By'];
+const REFERRAL_GOAL = 3;
+const HEADERS = [
+  'Timestamp',
+  'Email',
+  'School',
+  'Referral Code',
+  'Referred By',
+  'Referrals Count',
+  'Free Wash Reward',
+];
 
 // 45 deduplicated, sorted real signups from Website + Campus Survey
 // (excludes test emails: odulateabdullah / abdullahodulate & lagbaj*)
-const SEED_ROWS = [
+const SEED_BASE = [
   ['2026-11-12T15:04:23Z', 'abdulazeezjide13@gmail.com', 'Lagos State University (LASU)', 'abdulaze946', ''],
   ['2026-11-13T16:50:59Z', 'abdurrasheedkhabbab@gmail.com', 'Lagos State University (LASU)', 'abdurras518', ''],
   ['2026-11-18T07:59:00Z', 'ade206182@gmail.com', 'Lagos State University (LASU)', 'ade20618426', ''],
@@ -73,6 +87,13 @@ function isExcludedTestEmail(email) {
   return e.indexOf('lagbaj') === 0 || e.indexOf('odulate') !== -1;
 }
 
+function makeRowFormulas(rowNumber) {
+  return [
+    '=COUNTIF($E$2:$E, D' + rowNumber + ')',
+    '=IF(F' + rowNumber + '>=' + REFERRAL_GOAL + ', "UNLOCKED (1 FREE WASH)", "PENDING")',
+  ];
+}
+
 function getOrCreateSheet() {
   const ss = SpreadsheetApp.getActiveSpreadsheet();
   let sheet = ss.getSheetByName(SHEET_NAME) || ss.getSheets()[0];
@@ -80,8 +101,14 @@ function getOrCreateSheet() {
   if (sheet.getLastRow() === 0) {
     sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]).setFontWeight('bold');
     sheet.setFrozenRows(1);
-    if (SEED_ROWS.length > 0) {
-      sheet.getRange(2, 1, SEED_ROWS.length, HEADERS.length).setValues(SEED_ROWS);
+
+    if (SEED_BASE.length > 0) {
+      const fullSeed = SEED_BASE.map(function (r, idx) {
+        const rowNum = idx + 2;
+        const formulas = makeRowFormulas(rowNum);
+        return [r[0], r[1], r[2], r[3], r[4], formulas[0], formulas[1]];
+      });
+      sheet.getRange(2, 1, fullSeed.length, HEADERS.length).setValues(fullSeed);
     }
   }
   return sheet;
@@ -91,34 +118,53 @@ function seedSheet() {
   getOrCreateSheet();
 }
 
-function getCounts(sheet, targetSchool) {
+/**
+ * Reads sheet once and computes:
+ * - total unique valid signups
+ * - email -> { code, school } map
+ * - referralCode -> count of valid referred signups
+ */
+function readLedger(sheet) {
   const lastRow = sheet.getLastRow();
+  const emailMap = {}; // email -> { code, school }
+  const codeSet = {}; // code -> email
+  const referralCounts = {}; // referrerCode -> number
+
   if (lastRow <= 1) {
-    return { count: 0, schoolCount: 0, emails: new Set() };
+    return {
+      count: 0,
+      emailMap: emailMap,
+      codeSet: codeSet,
+      referralCounts: referralCounts,
+    };
   }
 
-  const values = sheet.getRange(2, 2, lastRow - 1, 2).getValues();
-  const emails = new Set();
-  let schoolCount = 0;
-  const normalizedSchool = (targetSchool || '').trim().toLowerCase();
+  // Read Col B (Email), Col C (School), Col D (Referral Code), Col E (Referred By)
+  const values = sheet.getRange(2, 2, lastRow - 1, 4).getValues();
 
   for (let i = 0; i < values.length; i++) {
     const rowEmail = String(values[i][0] || '').trim().toLowerCase();
-    const rowSchool = String(values[i][1] || '').trim().toLowerCase();
-    if (rowEmail && !isExcludedTestEmail(rowEmail)) {
-      if (!emails.has(rowEmail)) {
-        emails.add(rowEmail);
-        if (normalizedSchool && rowSchool === normalizedSchool) {
-          schoolCount++;
-        }
-      }
+    const rowSchool = String(values[i][1] || '').trim();
+    const rowCode = String(values[i][2] || '').trim().toLowerCase();
+    const rowRefBy = String(values[i][3] || '').trim().toLowerCase();
+
+    if (!rowEmail || isExcludedTestEmail(rowEmail)) continue;
+    if (emailMap[rowEmail]) continue; // Deduplicate first occurrence only
+
+    emailMap[rowEmail] = { code: rowCode, school: rowSchool };
+    if (rowCode) {
+      codeSet[rowCode] = rowEmail;
+    }
+    if (rowRefBy && rowRefBy !== rowCode) {
+      referralCounts[rowRefBy] = (referralCounts[rowRefBy] || 0) + 1;
     }
   }
 
   return {
-    count: emails.size,
-    schoolCount: schoolCount,
-    emails: emails,
+    count: Object.keys(emailMap).length,
+    emailMap: emailMap,
+    codeSet: codeSet,
+    referralCounts: referralCounts,
   };
 }
 
@@ -131,13 +177,25 @@ function jsonResponse(payload) {
 function doGet(e) {
   try {
     const sheet = getOrCreateSheet();
-    const school = e && e.parameter ? e.parameter.school : '';
-    const stats = getCounts(sheet, school);
+    const ledger = readLedger(sheet);
+    const paramCode = e && e.parameter && e.parameter.code
+      ? String(e.parameter.code).trim().toLowerCase()
+      : '';
+    const paramEmail = e && e.parameter && e.parameter.email
+      ? String(e.parameter.email).trim().toLowerCase()
+      : '';
+
+    const resolvedCode =
+      paramCode || (paramEmail && ledger.emailMap[paramEmail] ? ledger.emailMap[paramEmail].code : '');
+    const myReferrals = resolvedCode ? (ledger.referralCounts[resolvedCode] || 0) : 0;
 
     return jsonResponse({
       ok: true,
-      count: stats.count,
-      schoolCount: stats.schoolCount,
+      count: ledger.count,
+      referralCode: resolvedCode,
+      myReferrals: myReferrals,
+      referralGoal: REFERRAL_GOAL,
+      rewardUnlocked: myReferrals >= REFERRAL_GOAL,
     });
   } catch (err) {
     return jsonResponse({ ok: false, error: String(err) });
@@ -154,45 +212,73 @@ function doPost(e) {
 
     const email = String(body.email || '').trim().toLowerCase();
     const school = String(body.school || '').trim();
-    const referralCode = String(body.referralCode || '').trim();
-    const referredBy = String(body.referredBy || '').trim();
+    const incomingCode = String(body.referralCode || '').trim().toLowerCase();
+    const rawReferredBy = String(body.referredBy || '').trim().toLowerCase();
 
     if (!email || !school) {
       return jsonResponse({ ok: false, error: 'Missing email or school' });
     }
 
     const sheet = getOrCreateSheet();
-    const stats = getCounts(sheet, school);
+    const ledger = readLedger(sheet);
 
+    // Excluded test emails can preview the post-signup screen without altering real counts
     if (isExcludedTestEmail(email)) {
       return jsonResponse({
         ok: true,
-        count: stats.count,
-        schoolCount: stats.schoolCount,
+        count: ledger.count,
+        referralCode: incomingCode || 'testpreview',
+        myReferrals: 0,
+        referralGoal: REFERRAL_GOAL,
+        rewardUnlocked: false,
         excludedTestEmail: true,
       });
     }
 
-    let alreadyRegistered = false;
-    if (stats.emails.has(email)) {
-      alreadyRegistered = true;
-    } else {
-      sheet.appendRow([
-        new Date().toISOString(),
-        email,
-        school,
-        referralCode,
-        referredBy,
-      ]);
-      stats.count += 1;
-      stats.schoolCount += 1;
+    // Returning student: return their existing code + live referral progress
+    if (ledger.emailMap[email]) {
+      const existingCode = ledger.emailMap[email].code || incomingCode;
+      const existingRefs = existingCode ? (ledger.referralCounts[existingCode] || 0) : 0;
+      return jsonResponse({
+        ok: true,
+        count: ledger.count,
+        referralCode: existingCode,
+        myReferrals: existingRefs,
+        referralGoal: REFERRAL_GOAL,
+        rewardUnlocked: existingRefs >= REFERRAL_GOAL,
+        alreadyRegistered: true,
+      });
     }
+
+    // Block self-referrals & only attribute to an existing valid referrer code
+    const validReferredBy =
+      rawReferredBy && rawReferredBy !== incomingCode && ledger.codeSet[rawReferredBy]
+        ? rawReferredBy
+        : '';
+
+    const nextRowNum = sheet.getLastRow() + 1;
+    const formulas = makeRowFormulas(nextRowNum);
+
+    sheet.appendRow([
+      new Date().toISOString(),
+      email,
+      school,
+      incomingCode,
+      validReferredBy,
+      formulas[0],
+      formulas[1],
+    ]);
+
+    const newCount = ledger.count + 1;
 
     return jsonResponse({
       ok: true,
-      count: stats.count,
-      schoolCount: stats.schoolCount,
-      alreadyRegistered: alreadyRegistered,
+      count: newCount,
+      referralCode: incomingCode,
+      myReferrals: 0,
+      referralGoal: REFERRAL_GOAL,
+      rewardUnlocked: false,
+      alreadyRegistered: false,
     });
   } catch (err) {
     return jsonResponse({ ok: false, error: String(err) });

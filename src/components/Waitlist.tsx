@@ -5,6 +5,8 @@ const SHEET_WEBAPP_URL = import.meta.env.VITE_WAITLIST_SHEET_URL as string | und
 const WEB3FORMS_KEY = import.meta.env.VITE_WEB3FORMS_KEY as string | undefined
 
 const TARGET_SIGNUPS = 1000
+const REFERRAL_GOAL = 3
+
 // Verified unique waitlist + campus survey signups (LASU), excluding test accounts
 const SEEDED_EMAILS = new Set([
   'abdulazeezjide13@gmail.com',
@@ -54,13 +56,23 @@ const SEEDED_EMAILS = new Set([
   'yusufhalimah78@gmail.com',
 ])
 const INITIAL_VERIFIED_COUNT = SEEDED_EMAILS.size // 45
-const STORAGE_KEY = 'kilowash_waitlist_live_v2'
+const STORAGE_KEY = 'kilowash_waitlist_live_v3'
 
 interface SavedWaitlistState {
   email: string
   school: string
   referralCode: string
   lastKnownCount: number
+  myReferrals: number
+}
+
+interface SheetApiResponse {
+  ok?: boolean
+  count?: number
+  referralCode?: string
+  myReferrals?: number
+  referralGoal?: number
+  rewardUnlocked?: boolean
 }
 
 function isExcludedTestEmail(emailStr: string): boolean {
@@ -97,6 +109,7 @@ export default function Waitlist() {
   const [status, setStatus] = useState<'idle' | 'loading' | 'done' | 'error'>('idle')
 
   const [liveCount, setLiveCount] = useState<number>(INITIAL_VERIFIED_COUNT)
+  const [myReferrals, setMyReferrals] = useState<number>(0)
   const [savedUser, setSavedUser] = useState<SavedWaitlistState | null>(null)
   const [referredBy, setReferredBy] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -104,12 +117,15 @@ export default function Waitlist() {
 
   const dropdownRef = useRef<HTMLDivElement>(null)
 
+  // Hydrate referral param, saved session, and sync live total + personal referral count
   useEffect(() => {
     if (typeof window === 'undefined') return
 
     const params = new URLSearchParams(window.location.search)
-    const ref = params.get('ref')
-    if (ref) setReferredBy(ref)
+    const ref = params.get('ref')?.trim().toLowerCase() || null
+    if (ref && /^[a-z0-9]{4,16}$/.test(ref)) {
+      setReferredBy(ref)
+    }
 
     let restoredUser: SavedWaitlistState | null = null
     try {
@@ -120,6 +136,7 @@ export default function Waitlist() {
           restoredUser = parsed
           setSavedUser(parsed)
           setLiveCount(Math.max(INITIAL_VERIFIED_COUNT, parsed.lastKnownCount || 0))
+          setMyReferrals(parsed.myReferrals || 0)
           setStatus('done')
         }
       }
@@ -128,14 +145,28 @@ export default function Waitlist() {
     }
 
     if (SHEET_WEBAPP_URL) {
-      fetch(SHEET_WEBAPP_URL)
+      const query = restoredUser?.referralCode
+        ? `?code=${encodeURIComponent(restoredUser.referralCode)}`
+        : ''
+      fetch(`${SHEET_WEBAPP_URL}${query}`)
         .then(res => res.json())
-        .then((data: { ok?: boolean; count?: number }) => {
+        .then((data: SheetApiResponse) => {
           if (data?.ok && typeof data.count === 'number') {
             const countFromSheet = Math.max(INITIAL_VERIFIED_COUNT, data.count)
+            const refsFromSheet =
+              typeof data.myReferrals === 'number'
+                ? data.myReferrals
+                : restoredUser?.myReferrals || 0
             setLiveCount(countFromSheet)
+            setMyReferrals(refsFromSheet)
+
             if (restoredUser) {
-              const updated = { ...restoredUser, lastKnownCount: countFromSheet }
+              const updated: SavedWaitlistState = {
+                ...restoredUser,
+                referralCode: data.referralCode || restoredUser.referralCode,
+                lastKnownCount: countFromSheet,
+                myReferrals: refsFromSheet,
+              }
               setSavedUser(updated)
               try {
                 localStorage.setItem(STORAGE_KEY, JSON.stringify(updated))
@@ -146,12 +177,13 @@ export default function Waitlist() {
           }
         })
         .catch(() => {
-          // Keep verified baseline count if offline
+          // Keep cached count if offline
         })
     }
   }, [])
 
   const launchPercentage = Math.min(100, (liveCount / TARGET_SIGNUPS) * 100)
+  const rewardUnlocked = myReferrals >= REFERRAL_GOAL
 
   useEffect(() => {
     if (status !== 'done') {
@@ -203,16 +235,24 @@ export default function Waitlist() {
     setIsOpen(false)
   }
 
-  function finalizeSignup(cleanEmail: string, finalSchool: string, totalCount: number) {
-    const referralCode = generateReferralCode(cleanEmail)
+  function finalizeSignup(
+    cleanEmail: string,
+    finalSchool: string,
+    totalCount: number,
+    resolvedCode?: string,
+    referralCount = 0
+  ) {
+    const referralCode = resolvedCode || generateReferralCode(cleanEmail)
     const entry: SavedWaitlistState = {
       email: cleanEmail,
       school: finalSchool,
       referralCode,
       lastKnownCount: totalCount,
+      myReferrals: referralCount,
     }
 
     setLiveCount(totalCount)
+    setMyReferrals(referralCount)
     setSavedUser(entry)
     setStatus('done')
 
@@ -236,6 +276,8 @@ export default function Waitlist() {
 
     const generatedCode = generateReferralCode(cleanEmail)
     const isExcluded = isExcludedTestEmail(cleanEmail)
+    const safeReferredBy =
+      referredBy && referredBy !== generatedCode ? referredBy : ''
 
     // Optional background email notification via Web3Forms if configured
     if (WEB3FORMS_KEY && !isExcluded) {
@@ -247,12 +289,12 @@ export default function Waitlist() {
           email: cleanEmail,
           school: finalSchool,
           referral_code: generatedCode,
-          ...(referredBy ? { referred_by: referredBy } : {}),
+          ...(safeReferredBy ? { referred_by: safeReferredBy } : {}),
         }),
       }).catch(() => {})
     }
 
-    // Primary live storage & count via Google Sheets Web App
+    // Primary live storage & referral tracking via Google Sheets Web App
     if (SHEET_WEBAPP_URL) {
       try {
         const res = await fetch(SHEET_WEBAPP_URL, {
@@ -262,15 +304,17 @@ export default function Waitlist() {
             email: cleanEmail,
             school: finalSchool,
             referralCode: generatedCode,
-            referredBy: referredBy || '',
+            referredBy: safeReferredBy,
           }),
         })
-        const data = (await res.json()) as { ok?: boolean; count?: number }
+        const data = (await res.json()) as SheetApiResponse
         if (data?.ok && typeof data.count === 'number') {
           finalizeSignup(
             cleanEmail,
             finalSchool,
-            Math.max(INITIAL_VERIFIED_COUNT, data.count)
+            Math.max(INITIAL_VERIFIED_COUNT, data.count),
+            data.referralCode || generatedCode,
+            data.myReferrals || 0
           )
           return
         }
@@ -284,7 +328,7 @@ export default function Waitlist() {
     // Fallback using verified baseline + local deduplication before Sheet URL is added
     const shouldIncrement = !isExcluded && !SEEDED_EMAILS.has(cleanEmail)
     const nextCount = shouldIncrement ? liveCount + 1 : liveCount
-    finalizeSignup(cleanEmail, finalSchool, nextCount)
+    finalizeSignup(cleanEmail, finalSchool, nextCount, generatedCode, 0)
   }
 
   const shareOrigin =
@@ -295,7 +339,7 @@ export default function Waitlist() {
 
   const campusLabel = savedUser?.school || 'campus'
   const pctLabel = formatPct(launchPercentage)
-  const shareMessage = `I just joined the Kilowash waitlist to bring solar-powered 30-min laundry machines to ${campusLabel}. We're at ${pctLabel}% (${liveCount.toLocaleString()}/1,000) of the signups needed to launch — add your name here: ${referralUrl}`
+  const shareMessage = `I just joined the Kilowash waitlist to bring solar-powered 30-min laundry machines to ${campusLabel}. We're at ${pctLabel}% (${liveCount.toLocaleString()}/1,000) of the signups needed to launch — join with my link: ${referralUrl}`
 
   function handleCopyLink() {
     if (navigator.clipboard) {
@@ -421,7 +465,7 @@ export default function Waitlist() {
             >
               {status === 'done' ? (
                 <div
-                  className="text-center py-4 sm:py-6 flex flex-col items-center gap-6"
+                  className="text-center py-4 sm:py-5 flex flex-col items-center gap-5"
                   style={{ animation: 'slideUp 0.45s cubic-bezier(.22,1,.36,1) both' }}
                 >
                   {/* Verified Icon + Heading */}
@@ -449,60 +493,109 @@ export default function Waitlist() {
                         className="max-w-sm mx-auto mt-1.5"
                         style={{ fontSize: '13px', color: '#5a7578', lineHeight: 1.65 }}
                       >
-                        We launch once we hit{' '}
-                        <strong style={{ color: '#0b3c42' }}>1,000 signups</strong>. Share with
-                        your hostel mates so we go live faster.
+                        We launch at{' '}
+                        <strong style={{ color: '#0b3c42' }}>1,000 signups</strong>. Invite{' '}
+                        <strong style={{ color: '#0b3c42' }}>3 friends</strong> with your link
+                        to unlock <strong style={{ color: '#0b3c42' }}>1 free wash</strong>.
                       </p>
                     </div>
                   </div>
 
-                  {/* Single Clean Launch Meter (Actual Waitlist + Survey Data) */}
-                  <div className="w-full max-w-sm flex flex-col gap-2.5">
-                    <div className="flex items-baseline justify-between px-1">
-                      <span
-                        className="tabular-nums"
-                        style={{
-                          fontSize: '1.5rem',
-                          fontWeight: 800,
-                          color: '#0b3c42',
-                          letterSpacing: '-0.03em',
-                          lineHeight: 1,
-                        }}
-                      >
-                        {formatPct(animatedPct)}%{' '}
+                  {/* Launch Meter + Compact 3-Step Referral Pill */}
+                  <div className="w-full max-w-sm flex flex-col gap-3">
+                    <div className="flex flex-col gap-2">
+                      <div className="flex items-baseline justify-between px-1">
                         <span
+                          className="tabular-nums"
                           style={{
-                            fontSize: '12px',
-                            fontWeight: 600,
-                            color: '#5a7578',
-                            letterSpacing: '0',
+                            fontSize: '1.5rem',
+                            fontWeight: 800,
+                            color: '#0b3c42',
+                            letterSpacing: '-0.03em',
+                            lineHeight: 1,
                           }}
                         >
-                          to launch
+                          {formatPct(animatedPct)}%{' '}
+                          <span
+                            style={{
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              color: '#5a7578',
+                              letterSpacing: '0',
+                            }}
+                          >
+                            to launch
+                          </span>
                         </span>
-                      </span>
-                      <span
-                        className="tabular-nums"
-                        style={{ fontSize: '12px', fontWeight: 700, color: '#8aa8ab' }}
+                        <span
+                          className="tabular-nums"
+                          style={{ fontSize: '12px', fontWeight: 700, color: '#8aa8ab' }}
+                        >
+                          {liveCount.toLocaleString()} / {TARGET_SIGNUPS.toLocaleString()}
+                        </span>
+                      </div>
+
+                      <div
+                        className="w-full h-3.5 rounded-full p-0.5 overflow-hidden"
+                        style={{
+                          background: '#dde8ea',
+                          boxShadow: 'inset 3px 3px 6px #b8c6c9, inset -3px -3px 6px #ffffff',
+                        }}
                       >
-                        {liveCount.toLocaleString()} / {TARGET_SIGNUPS.toLocaleString()}
-                      </span>
+                        <div
+                          className="h-full rounded-full transition-all duration-700 ease-out"
+                          style={{
+                            width: `${liveCount > 0 ? Math.max(2.5, animatedPct) : 0}%`,
+                            background: '#fd8451',
+                          }}
+                        />
+                      </div>
                     </div>
 
+                    {/* Minimal 1-Line Referral Progress Indicator */}
                     <div
-                      className="w-full h-3.5 rounded-full p-0.5 overflow-hidden"
+                      className="flex items-center justify-between px-3.5 py-2.5 rounded-xl"
                       style={{
                         background: '#dde8ea',
-                        boxShadow: 'inset 3px 3px 6px #b8c6c9, inset -3px -3px 6px #ffffff',
+                        boxShadow: 'inset 2px 2px 5px #b8c6c9, inset -2px -2px 5px #ffffff',
                       }}
                     >
-                      <div
-                        className="h-full rounded-full transition-all duration-700 ease-out"
+                      <div className="flex items-center gap-2">
+                        <div className="flex items-center gap-1">
+                          {[0, 1, 2].map(idx => {
+                            const filled = idx < myReferrals
+                            return (
+                              <span
+                                key={idx}
+                                className="w-2 h-2 rounded-full transition-colors"
+                                style={{
+                                  background: filled
+                                    ? rewardUnlocked
+                                      ? '#0E8A5E'
+                                      : '#fd8451'
+                                    : '#b8c6c9',
+                                }}
+                              />
+                            )
+                          })}
+                        </div>
+                        <span
+                          className="tabular-nums"
+                          style={{ fontSize: '12px', fontWeight: 700, color: '#0b3c42' }}
+                        >
+                          {Math.min(myReferrals, REFERRAL_GOAL)} / {REFERRAL_GOAL} friends joined
+                        </span>
+                      </div>
+
+                      <span
                         style={{
-                          width: `${liveCount > 0 ? Math.max(2.5, animatedPct) : 0}%`,
-                          background: '#fd8451',
+                          fontSize: '11px',
+                          fontWeight: 700,
+                          color: rewardUnlocked ? '#0E8A5E' : '#fd8451',
                         }}
-                      />
+                      >
+                        {rewardUnlocked ? 'Free wash unlocked!' : '1 free wash'}
+                      </span>
                     </div>
                   </div>
 
@@ -583,7 +676,7 @@ export default function Waitlist() {
                         marginBottom: '4px',
                       }}
                     >
-                      Early Access Waitlist
+                      {referredBy ? 'Invited by a Friend · Early Access' : 'Early Access Waitlist'}
                     </div>
                     <h3
                       style={{
@@ -873,7 +966,9 @@ export default function Waitlist() {
                         finalizeSignup(
                           'lagbaj@gmail.com',
                           'Lagos State University (LASU)',
-                          liveCount
+                          liveCount,
+                          'lagbaj130',
+                          1
                         )
                       }
                       className="self-center text-[10px] font-medium text-[#8aa8ab] hover:text-[#fd8451] transition-colors -mt-2"

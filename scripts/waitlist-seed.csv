@@ -1,46 +1,46 @@
-Timestamp,Email,School,Referral Code,Referred By
-2026-11-12T15:04:23Z,abdulazeezjide13@gmail.com,Lagos State University (LASU),abdulaze946,
-2026-11-13T16:50:59Z,abdurrasheedkhabbab@gmail.com,Lagos State University (LASU),abdurras518,
-2026-11-18T07:59:00Z,ade206182@gmail.com,Lagos State University (LASU),ade20618426,
-2026-11-12T10:01:52Z,adeaayat2706@gmail.com,Lagos State University (LASU),adeaayat674,
-2026-11-12T11:13:45Z,adeolah0328@gmail.com,Lagos State University (LASU),adeolah0744,
-2026-11-12T16:31:27Z,adexlr8@gmail.com,Lagos State University (LASU),adexlr8697,
-2026-11-13T07:59:27Z,afolabioluwadabira83@gmail.com,Lagos State University (LASU),afolabio519,
-2026-11-14T20:05:49Z,ayetobaoladimeji@gmail.com,Lagos State University (LASU),ayetobao874,
-2026-11-12T18:04:14Z,balogunsewey4@gmail.com,Lagos State University (LASU),baloguns994,
-2026-11-13T07:51:26Z,basitolokunola@gmail.com,Lagos State University (LASU),basitolo432,
-2026-11-17T11:42:41Z,bellofuhad200@gmail.com,Lagos State University (LASU),bellofuh683,
-2026-11-14T16:04:49Z,benedictbanjo00@gmail.com,Lagos State University (LASU),benedict549,
-2026-11-14T13:10:42Z,daviesprecious202@gmail.com,Lagos State University (LASU),daviespr939,
-2026-11-14T11:03:12Z,erinfolamizainab67@gmail.com,Lagos State University (LASU),erinfola571,
-2026-11-13T08:58:58Z,faosideenolowolagba@gmail.com,Lagos State University (LASU),faosidee776,
-2026-11-13T12:04:00Z,giftayomikun76@gmail.com,Lagos State University (LASU),giftayom993,
-2026-11-14T11:06:19Z,ifeoluwaojuroye2005@gmail.com,Lagos State University (LASU),ifeoluwa461,
-2026-11-15T19:48:25Z,israelcabala06@gmail.com,Lagos State University (LASU),israelca289,
-2026-11-12T14:20:18Z,kennyclassical4real@gmail.com,Lagos State University (LASU),kennycla165,
-2026-11-16T14:30:54Z,koikiafusattaiwo@gmail.com,Lagos State University (LASU),koikiafu888,
-2026-11-12T11:24:06Z,kolapotaofeek4@gmail.com,Lagos State University (LASU),kolapota534,
-2026-11-12T23:18:22Z,makinderidwan0@gmail.com,Lagos State University (LASU),makinder193,
-2026-11-13T21:39:47Z,mathewsedicity@gmail.com,Lagos State University (LASU),mathewse489,
-2026-11-12T15:55:00Z,mayowayusuf3004@gmail.com,Lagos State University (LASU),mayowayu346,
-2026-11-12T13:12:00Z,mimirunsewe96@gmail.com,Lagos State University (LASU),mimiruns357,
-2026-11-13T11:37:31Z,mojereolamichael1@gmail.com,Lagos State University (LASU),mojereol591,
-2026-11-14T19:08:00Z,mujeebsanni679@gmail.com,Lagos State University (LASU),mujeebsa106,
-2026-11-12T23:32:13Z,mutmainnahgiwa@gmail.com,Lagos State University (LASU),mutmainn389,
-2026-11-14T19:16:00Z,nurudeenolumegbon1@gmail.com,Lagos State University (LASU),nurudeen868,
-2026-11-14T17:24:01Z,odogiyonm@gmail.com,Lagos State University (LASU),odogiyon922,
-2026-11-11T20:49:00Z,ojugbelelateef2006@gmail.com,Lagos State University (LASU),ojugbele801,
-2026-11-11T20:37:00Z,okehabeeboluwatobiloba@gmail.com,Lagos State University (LASU),okehabee665,
-2026-11-15T06:15:39Z,oladiposamuel1708@gmail.com,Lagos State University (LASU),oladipos640,
-2026-11-13T10:27:29Z,olugasarah84@gmail.com,Lagos State University (LASU),olugasar782,
-2026-11-14T15:19:00Z,omoleeniola2@gmail.com,Lagos State University (LASU),omoleeni833,
-2026-11-12T11:44:17Z,owolabititobi452@gmail.com,Lagos State University (LASU),owolabit476,
-2026-11-12T12:53:30Z,preciousfuwa14@gmail.com,Lagos State University (LASU),precious181,
-2026-11-12T14:38:38Z,savagehush007@gmail.com,Lagos State University (LASU),savagehu923,
-2026-11-12T15:20:19Z,slamsbaba005@gmail.com,Lagos State University (LASU),slamsbab154,
-2026-11-13T09:23:56Z,taiwoireoluwakunmi@gmail.com,Lagos State University (LASU),taiwoire919,
-2026-11-12T14:08:32Z,trustypeter16@gmail.com,Lagos State University (LASU),trustype477,
-2026-11-13T09:01:15Z,uthmanfathiu8@gmail.com,Lagos State University (LASU),uthmanfa481,
-2026-11-14T12:42:56Z,wabimbola9@gmail.com,Lagos State University (LASU),wabimbol700,
-2026-11-13T07:56:44Z,wareezahoyeshola05@gmail.com,Lagos State University (LASU),wareezah655,
-2026-11-15T08:15:41Z,yusufhalimah78@gmail.com,Lagos State University (LASU),yusufhal448,
+Timestamp,Email,School,Referral Code,Referred By,Referrals Count,Free Wash Reward
+2026-11-12T15:04:23Z,abdulazeezjide13@gmail.com,Lagos State University (LASU),abdulaze946,,"=COUNTIF($E$2:$E, D2)","=IF(F2>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T16:50:59Z,abdurrasheedkhabbab@gmail.com,Lagos State University (LASU),abdurras518,,"=COUNTIF($E$2:$E, D3)","=IF(F3>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-18T07:59:00Z,ade206182@gmail.com,Lagos State University (LASU),ade20618426,,"=COUNTIF($E$2:$E, D4)","=IF(F4>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T10:01:52Z,adeaayat2706@gmail.com,Lagos State University (LASU),adeaayat674,,"=COUNTIF($E$2:$E, D5)","=IF(F5>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T11:13:45Z,adeolah0328@gmail.com,Lagos State University (LASU),adeolah0744,,"=COUNTIF($E$2:$E, D6)","=IF(F6>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T16:31:27Z,adexlr8@gmail.com,Lagos State University (LASU),adexlr8697,,"=COUNTIF($E$2:$E, D7)","=IF(F7>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T07:59:27Z,afolabioluwadabira83@gmail.com,Lagos State University (LASU),afolabio519,,"=COUNTIF($E$2:$E, D8)","=IF(F8>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T20:05:49Z,ayetobaoladimeji@gmail.com,Lagos State University (LASU),ayetobao874,,"=COUNTIF($E$2:$E, D9)","=IF(F9>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T18:04:14Z,balogunsewey4@gmail.com,Lagos State University (LASU),baloguns994,,"=COUNTIF($E$2:$E, D10)","=IF(F10>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T07:51:26Z,basitolokunola@gmail.com,Lagos State University (LASU),basitolo432,,"=COUNTIF($E$2:$E, D11)","=IF(F11>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-17T11:42:41Z,bellofuhad200@gmail.com,Lagos State University (LASU),bellofuh683,,"=COUNTIF($E$2:$E, D12)","=IF(F12>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T16:04:49Z,benedictbanjo00@gmail.com,Lagos State University (LASU),benedict549,,"=COUNTIF($E$2:$E, D13)","=IF(F13>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T13:10:42Z,daviesprecious202@gmail.com,Lagos State University (LASU),daviespr939,,"=COUNTIF($E$2:$E, D14)","=IF(F14>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T11:03:12Z,erinfolamizainab67@gmail.com,Lagos State University (LASU),erinfola571,,"=COUNTIF($E$2:$E, D15)","=IF(F15>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T08:58:58Z,faosideenolowolagba@gmail.com,Lagos State University (LASU),faosidee776,,"=COUNTIF($E$2:$E, D16)","=IF(F16>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T12:04:00Z,giftayomikun76@gmail.com,Lagos State University (LASU),giftayom993,,"=COUNTIF($E$2:$E, D17)","=IF(F17>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T11:06:19Z,ifeoluwaojuroye2005@gmail.com,Lagos State University (LASU),ifeoluwa461,,"=COUNTIF($E$2:$E, D18)","=IF(F18>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-15T19:48:25Z,israelcabala06@gmail.com,Lagos State University (LASU),israelca289,,"=COUNTIF($E$2:$E, D19)","=IF(F19>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T14:20:18Z,kennyclassical4real@gmail.com,Lagos State University (LASU),kennycla165,,"=COUNTIF($E$2:$E, D20)","=IF(F20>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-16T14:30:54Z,koikiafusattaiwo@gmail.com,Lagos State University (LASU),koikiafu888,,"=COUNTIF($E$2:$E, D21)","=IF(F21>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T11:24:06Z,kolapotaofeek4@gmail.com,Lagos State University (LASU),kolapota534,,"=COUNTIF($E$2:$E, D22)","=IF(F22>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T23:18:22Z,makinderidwan0@gmail.com,Lagos State University (LASU),makinder193,,"=COUNTIF($E$2:$E, D23)","=IF(F23>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T21:39:47Z,mathewsedicity@gmail.com,Lagos State University (LASU),mathewse489,,"=COUNTIF($E$2:$E, D24)","=IF(F24>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T15:55:00Z,mayowayusuf3004@gmail.com,Lagos State University (LASU),mayowayu346,,"=COUNTIF($E$2:$E, D25)","=IF(F25>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T13:12:00Z,mimirunsewe96@gmail.com,Lagos State University (LASU),mimiruns357,,"=COUNTIF($E$2:$E, D26)","=IF(F26>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T11:37:31Z,mojereolamichael1@gmail.com,Lagos State University (LASU),mojereol591,,"=COUNTIF($E$2:$E, D27)","=IF(F27>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T19:08:00Z,mujeebsanni679@gmail.com,Lagos State University (LASU),mujeebsa106,,"=COUNTIF($E$2:$E, D28)","=IF(F28>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T23:32:13Z,mutmainnahgiwa@gmail.com,Lagos State University (LASU),mutmainn389,,"=COUNTIF($E$2:$E, D29)","=IF(F29>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T19:16:00Z,nurudeenolumegbon1@gmail.com,Lagos State University (LASU),nurudeen868,,"=COUNTIF($E$2:$E, D30)","=IF(F30>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T17:24:01Z,odogiyonm@gmail.com,Lagos State University (LASU),odogiyon922,,"=COUNTIF($E$2:$E, D31)","=IF(F31>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-11T20:49:00Z,ojugbelelateef2006@gmail.com,Lagos State University (LASU),ojugbele801,,"=COUNTIF($E$2:$E, D32)","=IF(F32>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-11T20:37:00Z,okehabeeboluwatobiloba@gmail.com,Lagos State University (LASU),okehabee665,,"=COUNTIF($E$2:$E, D33)","=IF(F33>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-15T06:15:39Z,oladiposamuel1708@gmail.com,Lagos State University (LASU),oladipos640,,"=COUNTIF($E$2:$E, D34)","=IF(F34>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T10:27:29Z,olugasarah84@gmail.com,Lagos State University (LASU),olugasar782,,"=COUNTIF($E$2:$E, D35)","=IF(F35>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T15:19:00Z,omoleeniola2@gmail.com,Lagos State University (LASU),omoleeni833,,"=COUNTIF($E$2:$E, D36)","=IF(F36>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T11:44:17Z,owolabititobi452@gmail.com,Lagos State University (LASU),owolabit476,,"=COUNTIF($E$2:$E, D37)","=IF(F37>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T12:53:30Z,preciousfuwa14@gmail.com,Lagos State University (LASU),precious181,,"=COUNTIF($E$2:$E, D38)","=IF(F38>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T14:38:38Z,savagehush007@gmail.com,Lagos State University (LASU),savagehu923,,"=COUNTIF($E$2:$E, D39)","=IF(F39>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T15:20:19Z,slamsbaba005@gmail.com,Lagos State University (LASU),slamsbab154,,"=COUNTIF($E$2:$E, D40)","=IF(F40>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T09:23:56Z,taiwoireoluwakunmi@gmail.com,Lagos State University (LASU),taiwoire919,,"=COUNTIF($E$2:$E, D41)","=IF(F41>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-12T14:08:32Z,trustypeter16@gmail.com,Lagos State University (LASU),trustype477,,"=COUNTIF($E$2:$E, D42)","=IF(F42>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T09:01:15Z,uthmanfathiu8@gmail.com,Lagos State University (LASU),uthmanfa481,,"=COUNTIF($E$2:$E, D43)","=IF(F43>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-14T12:42:56Z,wabimbola9@gmail.com,Lagos State University (LASU),wabimbol700,,"=COUNTIF($E$2:$E, D44)","=IF(F44>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-13T07:56:44Z,wareezahoyeshola05@gmail.com,Lagos State University (LASU),wareezah655,,"=COUNTIF($E$2:$E, D45)","=IF(F45>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
+2026-11-15T08:15:41Z,yusufhalimah78@gmail.com,Lagos State University (LASU),yusufhal448,,"=COUNTIF($E$2:$E, D46)","=IF(F46>=3, ""UNLOCKED (1 FREE WASH)"", ""PENDING"")"
