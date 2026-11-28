@@ -33,6 +33,7 @@ export default function Waitlist() {
 
   const [liveCount, setLiveCount] = useState<number>(INITIAL_VERIFIED_COUNT)
   const [myReferrals, setMyReferrals] = useState<number>(0)
+  const [alreadyRegistered, setAlreadyRegistered] = useState<boolean>(false)
   const [savedUser, setSavedUser] = useState<SavedWaitlistState | null>(null)
   const [referredBy, setReferredBy] = useState<string | null>(null)
   const [copiedLink, setCopiedLink] = useState(false)
@@ -147,7 +148,8 @@ export default function Waitlist() {
     finalSchool: string,
     totalCount: number,
     referralCode: string,
-    referralCount: number
+    referralCount: number,
+    wasAlreadyRegistered = false
   ) {
     const entry: SavedWaitlistState = {
       email: cleanEmail,
@@ -159,6 +161,7 @@ export default function Waitlist() {
 
     setLiveCount(totalCount)
     setMyReferrals(referralCount)
+    setAlreadyRegistered(wasAlreadyRegistered)
     setSavedUser(entry)
     setStatus('done')
 
@@ -192,7 +195,8 @@ export default function Waitlist() {
         finalSchool,
         result.count,
         result.referralCode,
-        result.myReferrals
+        result.myReferrals,
+        Boolean(result.alreadyRegistered)
       )
     } catch {
       setStatus('error')
@@ -355,7 +359,7 @@ export default function Waitlist() {
 
                     <div>
                       <h3 style={{ fontWeight: 800, fontSize: '1.35rem', color: '#0b3c42' }}>
-                        You are in.
+                        {alreadyRegistered ? "You're already on the list." : 'You are in.'}
                       </h3>
                       <p
                         className="max-w-sm mx-auto mt-1.5"

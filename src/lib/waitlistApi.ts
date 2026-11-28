@@ -71,6 +71,7 @@ export interface WaitlistStats {
   referralCode: string
   myReferrals: number
   rewardUnlocked: boolean
+  alreadyRegistered?: boolean
 }
 
 interface SupabaseRpcResponse {
@@ -79,6 +80,7 @@ interface SupabaseRpcResponse {
   referral_code?: string
   my_referrals?: number
   reward_unlocked?: boolean
+  already_registered?: boolean
   error?: string
 }
 
@@ -147,21 +149,6 @@ export async function submitWaitlistSignup(params: {
   const safeReferredBy =
     params.referredBy && params.referredBy !== generatedCode ? params.referredBy : null
 
-  // Optional background email alert via Web3Forms if configured
-  if (WEB3FORMS_KEY && !isExcluded) {
-    fetch('https://api.web3forms.com/submit', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
-      body: JSON.stringify({
-        access_key: WEB3FORMS_KEY,
-        email: cleanEmail,
-        school: finalSchool,
-        referral_code: generatedCode,
-        ...(safeReferredBy ? { referred_by: safeReferredBy } : {}),
-      }),
-    }).catch(() => {})
-  }
-
   // Primary database: Supabase RPC
   if (SUPABASE_URL && SUPABASE_KEY) {
     const res = await fetch(`${SUPABASE_URL}/rest/v1/rpc/join_waitlist`, {
@@ -184,21 +171,41 @@ export async function submitWaitlistSignup(params: {
       throw new Error(data?.error || 'Invalid waitlist response')
     }
 
+    const alreadyRegistered = Boolean(data.already_registered)
+
+    // Only send Web3Forms email notification for brand-new signups
+    if (WEB3FORMS_KEY && !isExcluded && !alreadyRegistered) {
+      fetch('https://api.web3forms.com/submit', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+        body: JSON.stringify({
+          access_key: WEB3FORMS_KEY,
+          email: cleanEmail,
+          school: finalSchool,
+          referral_code: data.referral_code || generatedCode,
+          ...(safeReferredBy ? { referred_by: safeReferredBy } : {}),
+        }),
+      }).catch(() => {})
+    }
+
     return {
       count: Math.max(INITIAL_VERIFIED_COUNT, data.count),
       referralCode: data.referral_code || generatedCode,
       myReferrals: data.my_referrals ?? 0,
       rewardUnlocked: Boolean(data.reward_unlocked),
+      alreadyRegistered,
     }
   }
 
   // Local fallback when Supabase env vars haven't been added yet
+  const alreadySeeded = SEEDED_EMAILS.has(cleanEmail)
   const baseCount = params.fallbackCurrentCount ?? INITIAL_VERIFIED_COUNT
-  const shouldIncrement = !isExcluded && !SEEDED_EMAILS.has(cleanEmail)
+  const shouldIncrement = !isExcluded && !alreadySeeded
   return {
     count: shouldIncrement ? baseCount + 1 : baseCount,
     referralCode: generatedCode,
     myReferrals: 0,
     rewardUnlocked: false,
+    alreadyRegistered: alreadySeeded,
   }
 }
